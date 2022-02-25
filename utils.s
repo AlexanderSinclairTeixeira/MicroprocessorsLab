@@ -1,7 +1,8 @@
 #include <xc.inc>
 
-global mul_16x16, mul_16x16_u, hex_to_dec
-global delay_W_ms, delay_W_4us, delay_500ns
+global mul_u16_x_u16, hex_to_dec
+global delay_W_ms, delay_W_4us, delay_count_250ns, delay_500ns
+global counter_low, counter_high, ms_counter
 
 psect udata_acs
 
@@ -26,14 +27,14 @@ delay_W_4us:
     ; delay by W * 4us
     ; need to multiply W by 16
     ; if called from delay_ms_inner_loop, W=250
-    movwf   LCD_cnt_l, A    ; save W to count_low temporarily
-    swapf   LCD_cnt_l, F, A ; swap nibbles
+    movwf   counter_low, A    ; save W to count_low temporarily
+    swapf   counter_low, F, A ; swap nibbles
     movlw   0x0f	    
-    andwf   LCD_cnt_l, W, A ; move low nibble to W
-    movwf   LCD_cnt_h, A    ; then to LCD_cnt_h
+    andwf   counter_low, W, A ; move low nibble to W
+    movwf   counter_high, A    ; then to LCD_cnt_h
     movlw   0xf0	    
-    andwf   LCD_cnt_l, F, A ; keep high nibble in LCD_cnt_l
-    call    LCD_delay
+    andwf   counter_low, F, A ; keep high nibble in LCD_cnt_l
+    call    delay_count_250ns
     return
 
 delay_count_250ns:
@@ -60,8 +61,37 @@ delay_500ns:
     nop
     nop
     return
-    
-
+ 
+ mul_u16_x_u16 MACRO arg1H, arg1L, arg2H, arg2L, res3, res2, res1, res0
+    ; low * low in bottom two registers
+    movf arg1L, W
+    mulwf arg2L
+    movf PRODH, res1
+    movf PRODL, res0
+    ; high * high in top two registers
+    movf arg1H, W
+    mulwf arg2H
+    movf PRODH, res3
+    movf PRODL, res2
+    ; cross products high * low in middle two registers
+    movf arg1L, W
+    mulwf arg2H
+    movf PRODL, W
+    addwf res1, F
+    movf PRODH, W
+    addwfc res2, F
+    clrf WREG
+    addwfc res3, F
+    ; cross products low * high in middle two registers
+    movf arg1H, W
+    mulwf arg2L
+    movf PRODL, W
+    addwf res1, F
+    movf PRODH, W
+    addwfc res2, F
+    clrf WREG
+    addwfc res3, F
+ENDM
 
 
     end
