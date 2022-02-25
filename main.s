@@ -2,7 +2,8 @@
 
 extrn	UART_Setup, UART_Transmit_Message   ; UART stuff
 extrn	LCD_Setup, LCD_Write_Message	    ; LCD stuff
-entrn	delay_W_ms, delay_W_4us, delay_count_250ns, delay_500ns, mul_u16_x_u16 ;from utils
+extrn	delay_W_ms, delay_W_4us, delay_count_250ns, delay_500ns ;from utils
+;extrn	mul_u16_x_u16 ;from utils
 extrn	counter_low, counter_high, ms_counter	    ;from utils
 extrn	keypad_setup, keypad_read, rows, cols
 
@@ -18,7 +19,7 @@ res4:	ds 1
 psect code
 
 setup:
-    call UART_Setup
+    ;call UART_Setup
     call LCD_Setup
     call keypad_setup
     goto start

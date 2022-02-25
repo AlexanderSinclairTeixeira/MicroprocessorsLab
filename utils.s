@@ -1,6 +1,6 @@
 #include <xc.inc>
 
-global mul_u16_x_u16, hex_to_dec
+global mul_u16_x_u16
 global delay_W_ms, delay_W_4us, delay_count_250ns, delay_500ns
 global counter_low, counter_high, ms_counter
 
@@ -15,11 +15,11 @@ psect code
     
 delay_W_ms:
     ; delay number of ms in W
-    movwf   ms_count, A
+    movwf   ms_counter, A
     inner_loop_1:
 	movlw   250		; 250 * 4us = 1 ms delay
 	call	delay_W_4us	
-	decfsz	ms_count, A
+	decfsz	ms_counter, A
 	bra	inner_loop_1
     return
     

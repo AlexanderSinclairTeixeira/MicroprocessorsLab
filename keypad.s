@@ -6,16 +6,19 @@ global keypad_setup, keypad_read, rows, cols
 
 psect udata_acs
 
-rows ds: 1
-cols ds: 1
+rows EQU 0x10
+cols EQU 0x11
     
     
 psect code
  
 keypad_setup:
-    banksel 0xF
-    bsf PADCFG1, REPU, B
-    clrf LATE
+    movlw 0x00
+    movwf TRISC
+    movwf TRISD
+    movlb 0x0f
+    bsf REPU
+    clrf LATE, A
     return
     
 keypad_read:
@@ -24,20 +27,16 @@ keypad_read:
     movwf TRISE, A
     call delay_500ns
     call delay_500ns
-    call delay_500ns
-    call delay_500ns
-    movf PORTE, rows
+    movff PORTE, rows
     
     ; PORTE<0:3> outputs, PORTE<4:7> inputs
     movlw 0b11110000
     movwf TRISE, A
     call delay_500ns
     call delay_500ns
-    call delay_500ns
-    call delay_500ns
-    movf PORTE, cols
+    movff PORTE, cols, A
     
-    movf rows, PORTC    
-    movf cols, PORTD
+    movff rows, PORTC, A 
+    movff cols, PORTD, A
     return
     
