@@ -1,11 +1,11 @@
 #include <xc.inc>
 
-extrn	UART_Setup, UART_Transmit_Message   ; UART stuff
+;extrn	UART_Setup, UART_Transmit_Message   ; UART stuff
 extrn	LCD_Setup, LCD_Write_Message	    ; LCD stuff
-extrn	delay_W_ms, delay_W_4us, delay_count_250ns, delay_500ns ;from utils
+;extrn	delay_W_ms, delay_W_4us, delay_count_250ns, delay_500ns ;from utils
 ;extrn	mul_u16_x_u16 ;from utils
-extrn	counter_low, counter_high, ms_counter	    ;from utils
-extrn	keypad_setup, keypad_read, rows, cols
+;extrn	counter_low, counter_high, ms_counter	    ;from utils
+extrn	keypad_setup, keypad_read
 
     
 psect udata_acs
