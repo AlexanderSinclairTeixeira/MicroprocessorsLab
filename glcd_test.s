@@ -1,6 +1,6 @@
 #include <xc.inc>
 
-;test al of this on the emulator
+;test all of this on the emulator
 setup: ;setup to ports and name the pins! so I dont get confused
     movlw 0x00
     movwf TRISB, A
@@ -67,3 +67,5 @@ clock: ;set the clock to run
    
 delay_1us: ; a 1us delay that would go between clock cycles
     nop
+
+
