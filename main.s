@@ -1,151 +1,171 @@
 #include <xc.inc>
 
+#define    CS1 0 ;chip select left
+#define    CS2 1 ;chip select right
+#define    RS  2 ;high for data, low for instruction
+#define    RW_  3 ;high for read, low for write
+#define    E   4 ;clock: cycle time 1us and triggers on falling edge
+#define    RST 5 ;reset (active high so write 1 for reset)
+
 psect udata_acs
     glcd_status EQU 0x00
-    y_counter EQU 0x01
-    big_bois EQU 0x02
+    glcd_read EQU 0x01
+    y_counter EQU 0x02
  
 psect code, abs
 rst:
-    org 0x0
+    org 0x0	;reset vector
     goto setup
+
+int_hi:
+    org 0x08	;high interrupt vector
     
-setup: ;setup to ports and name the pins! so I dont get confused
-    #define    CS1 0
-    #define    CS2 1
-    #define    RS  2
-    #define    RW_  3
-    #define    E   4
-    #define    RST 5
+setup:
     movlw 0x00
-    movwf TRISB, A
-    movwf TRISD, A
-    call delay_1us
+    movwf TRISB, A ;port B is output
+    movwf TRISD, A ;port D is output
+    clrf LATD, A
+    call delay_1us ;stabilise
     call display_on
-    call clock
     movlw 32
     movwf y_counter, A
     goto start
   
 start:
-    call lr_select
-    ;call clock
-    call page_select
-    call clock
-    call status_read
-    call clock
-    call y_address
-    call clock
-    call write_strip
-    call clock
-    call read_data
-    call clock
-    call y_address
-    call clock
+    movlw 0
+    call psel_W
+    call ysel_W
+    movlw 0x55
+    call write_strip_W
     decfsz y_counter,A
-    ;goto start
+    goto start
     goto $
-    
+
+; main functions to control the display
+; display_on, display_off, psel_W, ysel_W, write_strip_W, read_data_read_status
+; above all have timing included
+; display_start not implemented yet
 display_on:
-    bcf PORTB, RS, A
-    bcf PORTB, RW_, A
-    movlw 0b00111111
-    movwf PORTD, A
-    call clock
-    clrf LATD, A
-    clrf WREG, A
-    call delay_1us
+    call write_inst_pin_setup
+    movlw 0b00111111 ;last bit set for on
+    call send_D_and_clock
     return
-lr_select: ;select the half of the screen that I care about
-    ;set the cs0 pin
-    bsf PORTB, CS1, A ;hopefully this selects bit zero!!
-    ;set the cs1 pin
-    bcf PORTB, CS2, A
+    
+display_off:
+    call write_inst_pin_setup
+    movlw 0b00111110 ;last bit clear for off
+    call send_D_and_clock
     return
    
-page_select: ;select the page on the screen dont touch the cs pins anymore!!
-    ;set the page bits can modify so this is already in w when the subroutine is called
-    movlw 0 ;a number from 0 - 7 i.e. the page I want
-    movwf PORTD, A
-   
-    ;So here we first set the page and then modify the other bits so it knows that it is doing a page select command
-   
-    ;set the instruction to 'set page'
-    bsf PORTD, 7, A ;d7,d5,d4,d3
-    bsf PORTD, 5, A
-    bsf PORTD, 4, A
-    bsf PORTD, 3, A
-   
-    bcf PORTB, RS, A ;RS RW D6
-    bcf PORTB, RW_, A
-    bcf PORTB, 6, A
-    ;then go to the next step
+psel_W:
+    call write_inst_pin_setup
+    ;WREG contains a number from 0b000 - 0b111 i.e. the page number 0 - 7
+    ;now set the page on the chip from the value in working register
+    addlw 0b10111000 ;turn into page select instruction
+    call send_D_and_clock
+    return
+    
+ysel_W:
+    call write_inst_pin_setup
+    ;select the y adress from WREG 0b00000000 - 0b01111111, i.e. 0 - 127
+    ;now set the strip on the page from the value in working register
+    call csel_L ;assume left, i.e. 0 <= W < 64
+    btfsc WREG, 6, A ;skip the next instruction if bit 6 of W is clear
+    call csel_R ;if it is set, we are in 64-127, so on the right chip
+    bsf WREG, 6, A ;turn into instruction
+    call send_D_and_clock
+    return
+
+;display_start:
+    ;used for scrolling i think?
+    ;call write_inst
+    ;needs implementing (maybe?)
+    ;return
+    
+write_strip_W:
+    ;write a pixel strip from W to glcd ram
+    ;increases y address automatically
+    call write_data_pin_setup
+    call send_D_and_clock
     return
 
 read_data:
-    bsf PORTB, RS, A
-    bsf PORTB, RW_, A
+    call read_data_pin_setup
     movlw 0xFF
-    movwf TRISD, A
-    clrf LATD, A
-    call clock
-    movff TRISD, big_bois, A
+    movwf TRISD, A ;set PORTD as input
+    clrf LATD, A ;dont want any interference
+    call clock ;send instruction and get the data
+    movff PORTD, glcd_read, A
     movlw 0x00
-    movwf TRISD, A
+    movwf TRISD, A ;PORTD back to output
+    clrf LATD, A
+    call delay_1us
     return
-y_address: ;select the y adress
-    movlw 0 ;a number from 0-63 takes bits 0-5
+   
+read_status:
+    ;B0PR0000
+    ;B=Busy: 0-ready, 1-in operation
+    ;P=power: 0-on, 1-off
+    ;R=Reset: 0-normal, 1-reset
+    call read_inst_pin_setup
+    movlw 0xFF
+    movwf TRISD, A ;set PORTD as input
+    clrf LATD, A ;dont want any interference
+    call clock ;send instruction and get the data
+    movff PORTD, glcd_status, A
+    movlw 0x00
+    movwf TRISD, A;PORTD back to output
+    clrf LATD, A
+    call delay_1us
+    return
+   
+;inner function calls to save being repetitive
+send_D_and_clock:
     movwf PORTD, A
-   
-    ;set the instruction bits
-    bcf PORTB, RS, A
-    bcf PORTB, RW_, A
-    bcf PORTD, 6, A
-   
-    bsf PORTD, 7, A
-    return
-   
-
-write_strip: ;write a pixel strip to ram
-    ;data pins change it to take from the working directory later
-    ;this just takes a hard coded value for now
-    movlw 0x55
-    movwf PORTD, A
-    ;instruction pins
-    bsf PORTB, RS, A
-    bcf PORTB, RW_, A
-    return
-
-status_read:
-    bsf TRISD,7,A
-    bsf TRISD,5,A
-    bsf TRISD,4,A
-   
-    bsf PORTB, RS, A
-    bcf PORTB, RW_, A
-    bcf PORTD, 6, A
-    bcf PORTD, 3, A
-    bcf PORTD, 2, A
-    bcf PORTD, 1, A
-    bcf PORTD, 0, A
     call clock
     clrf LATD, A
     call delay_1us
-    movff PORTD, glcd_status, A
-    bcf TRISD,7,A
-    bcf TRISD,5,A
-    bcf TRISD,4,A
     return
-    
-clock: ;set the clock to run
-    bcf PORTB, E, A
-    call delay_1us
+
+read_inst_pin_setup:
+    bcf PORTB, RS, A ;instruction
+    bsf PORTB, RW_, A ;reading
+    return
+
+read_data_pin_setup:
+    bsf PORTB, RS, A ;data
+    bsf PORTB, RW_, A ;reading
+    return
+
+write_inst_pin_setup:
+    bcf PORTB, RS, A ;instruction
+    bcf PORTB, RW_, A ;writing
+    return
+
+write_data_pin_setup:
+    bsf PORTB, RS, A ;data
+    bcf PORTB, RW_, A ;writing
+    return
+
+csel_L:
+    bsf PORTB, CS1, A    ;set the cs0 pin
+    bcf PORTB, CS2, A    ;clear the cs1 pin
+    return
+
+csel_R:
+    bcf PORTB, CS1, A    ;clear the cs0 pin
+    bsf PORTB, CS2, A    ;set the cs1 pin
+    return
+
+;timing stuff
+clock: ;set the clock to run (falling edge)
     bsf PORTB, E, A
     call delay_1us
     bcf PORTB, E, A
+    call delay_1us
     return
    
-delay_1us: ; a 1us delay that would go between clock cycles
+delay_1us: ;16 instructions * 4 Q cycles @ 64MHz = 1us delay
     nop
     nop
     nop
@@ -163,3 +183,5 @@ delay_1us: ; a 1us delay that would go between clock cycles
     nop
     nop
     return
+
+end	    rst
