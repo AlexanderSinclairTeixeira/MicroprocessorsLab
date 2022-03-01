@@ -1,35 +1,49 @@
 #include <xc.inc>
 
-#define    CS1 0
-#define    CS2 1
-#define    RS  2
-#define    RW_  3
-#define    E   4
-#define    RST 5
-
+psect udata_acs
+    glcd_status EQU 0x00
+    y_counter EQU 0x01
+    big_bois EQU 0x02
+ 
 psect code, abs
 rst:
     org 0x0
     goto setup
     
 setup: ;setup to ports and name the pins! so I dont get confused
+    #define    CS1 0
+    #define    CS2 1
+    #define    RS  2
+    #define    RW_  3
+    #define    E   4
+    #define    RST 5
     movlw 0x00
     movwf TRISB, A
     movwf TRISD, A
     call delay_1us
     call display_on
     call clock
+    movlw 32
+    movwf y_counter, A
     goto start
   
 start:
     call lr_select
-    call delay_1us
+    ;call clock
     call page_select
+    call clock
+    call status_read
     call clock
     call y_address
     call clock
     call write_strip
     call clock
+    call read_data
+    call clock
+    call y_address
+    call clock
+    decfsz y_counter,A
+    ;goto start
     goto $
     
 display_on:
@@ -37,6 +51,10 @@ display_on:
     bcf PORTB, RW_, A
     movlw 0b00111111
     movwf PORTD, A
+    call clock
+    clrf LATD, A
+    clrf WREG, A
+    call delay_1us
     return
 lr_select: ;select the half of the screen that I care about
     ;set the cs0 pin
@@ -64,6 +82,17 @@ page_select: ;select the page on the screen dont touch the cs pins anymore!!
     ;then go to the next step
     return
 
+read_data:
+    bsf PORTB, RS, A
+    bsf PORTB, RW_, A
+    movlw 0xFF
+    movwf TRISD, A
+    clrf LATD, A
+    call clock
+    movff TRISD, big_bois, A
+    movlw 0x00
+    movwf TRISD, A
+    return
 y_address: ;select the y adress
     movlw 0 ;a number from 0-63 takes bits 0-5
     movwf PORTD, A
@@ -79,14 +108,33 @@ y_address: ;select the y adress
 
 write_strip: ;write a pixel strip to ram
     ;data pins change it to take from the working directory later
-    ;this just takes a hard coded value
-    movlw 0x55	;remove this line later
+    ;this just takes a hard coded value for now
+    movlw 0x55
     movwf PORTD, A
-   
     ;instruction pins
+    bsf PORTB, RS, A
+    bcf PORTB, RW_, A
+    return
+
+status_read:
+    bsf TRISD,7,A
+    bsf TRISD,5,A
+    bsf TRISD,4,A
    
     bsf PORTB, RS, A
     bcf PORTB, RW_, A
+    bcf PORTD, 6, A
+    bcf PORTD, 3, A
+    bcf PORTD, 2, A
+    bcf PORTD, 1, A
+    bcf PORTD, 0, A
+    call clock
+    clrf LATD, A
+    call delay_1us
+    movff PORTD, glcd_status, A
+    bcf TRISD,7,A
+    bcf TRISD,5,A
+    bcf TRISD,4,A
     return
     
 clock: ;set the clock to run
