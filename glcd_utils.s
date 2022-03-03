@@ -109,8 +109,8 @@ read_status:
     ;B=Busy: 0-ready, 1-in operation
     ;P=power: 0-on, 1-off
     ;R=Reset: 0-normal, 1-reset
-    call read_inst_pin_setup
     movlw 0xFF
+    call read_inst_pin_setup
     movwf TRISD, A ;set PORTD as input
     clrf LATD, A ;dont want any interference
     call clock ;send instruction and get the data
