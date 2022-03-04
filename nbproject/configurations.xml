@@ -14,13 +14,16 @@
                    projectFiles="true">
       <itemPath>config.s</itemPath>
       <itemPath>main.s</itemPath>
-      <itemPath>glcd_debug.s</itemPath>
+      <itemPath>glcd_utils.s</itemPath>
     </logicalFolder>
     <logicalFolder name="ExternalFiles"
                    displayName="Important Files"
                    projectFiles="false">
       <itemPath>Makefile</itemPath>
     </logicalFolder>
+    <itemPath>README.md</itemPath>
+    <itemPath>README.md</itemPath>
+    <itemPath>README.md</itemPath>
     <itemPath>README.md</itemPath>
   </logicalFolder>
   <sourceRootList>
@@ -588,6 +591,7 @@
         <property key="codecoverage.outputfile" value=""/>
         <property key="codecoverage.report" value=""/>
         <property key="debugoptions.useswbreakpoints" value="false"/>
+        <property key="firmware.download.all" value="false"/>
         <property key="hwtoolclock.frcindebug" value="false"/>
         <property key="memories.aux" value="false"/>
         <property key="memories.bootflash" value="false"/>
