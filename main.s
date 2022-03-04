@@ -24,8 +24,10 @@ setup:
     goto start
 
 start:
-    movlw 0b00110011
+    movlw 0x44
     call write_strip_W
+    tstfsz glcd_y
+    goto start
     incf glcd_page, A
     movf glcd_page, W
     call psel_W

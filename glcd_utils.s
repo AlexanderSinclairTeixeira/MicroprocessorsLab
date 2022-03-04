@@ -174,7 +174,13 @@ clock: ;set the clock to run (falling edge)
     return
    
 delay_1us: ;16 instructions * 4 Q cycles @ 64MHz = 1us delay
-    REPT 32
+    REPT 16
 	nop
     ENDM
+    return
+    
+delay_250ns:
+    nop
+    nop
+    nop
     return

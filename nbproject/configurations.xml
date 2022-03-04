@@ -22,6 +22,7 @@
       <itemPath>Makefile</itemPath>
     </logicalFolder>
     <itemPath>README.md</itemPath>
+    <itemPath>README.md</itemPath>
   </logicalFolder>
   <sourceRootList>
     <Elem>.</Elem>
@@ -34,7 +35,7 @@
         <targetDevice>PIC18F87K22</targetDevice>
         <targetHeader></targetHeader>
         <targetPluginBoard></targetPluginBoard>
-        <platformTool>pk4hybrid</platformTool>
+        <platformTool>ICD3PlatformTool</platformTool>
         <languageToolchain>pic-as</languageToolchain>
         <languageToolchainVersion>2.32</languageToolchainVersion>
         <platform>3</platform>

@@ -31,13 +31,14 @@ glcd_setup:
     movlw 0x00
     movwf TRISB, A ;port B is output
     movwf TRISD, A ;port D is output
-    ;movlw 250
-    ;call delay_ms_W
+    movlw 250
+    call delay_ms_W
     call glcd_on
     return
 
 glcd_on:
     bcf PORTB, GLCD_RS, A ;instruction
+    call delay_250ns
     bcf PORTB, GLCD_RW, A ;writing
     movlw 0b00111111 ;last bit set for on
     movwf PORTD, A
@@ -53,6 +54,7 @@ glcd_on:
     
 glcd_off:
     bcf PORTB, GLCD_RS, A ;instruction
+    call delay_250ns
     bcf PORTB, GLCD_RW, A ;writing
     movlw 0b00111110 ;last bit clear for off
     movwf PORTD, A
@@ -73,6 +75,7 @@ ysel_W:
     call csel_R ;if it is set, we are in 64-127, so on the right chip
     
     bcf PORTB, GLCD_RS, A ;instruction
+    call delay_250ns
     bcf PORTB, GLCD_RW, A ;writing
     movf glcd_y, W ; load up the y value
     bsf WREG, 6, A ;turn into desired instruction
@@ -94,6 +97,7 @@ psel_W:
     call csel_R ;if it is set, we are in 64-127, so on the right chip
 
     bcf PORTB, GLCD_RS, A ;instruction
+    call delay_250ns
     bcf PORTB, GLCD_RW, A ;writing
     movf glcd_page, W ;load up the page number
     addlw 0b10111000 ;turn into page select instruction
@@ -119,6 +123,7 @@ write_strip_W:
     call csel_R ;if it is set, we are in 64-127, so on the right chip
     
     bsf PORTB, GLCD_RS, A ;data
+    call delay_250ns
     bcf PORTB, GLCD_RW, A ;writing
     movf glcd_write, W ; load up the write value
     movwf PORTD, A
@@ -181,19 +186,21 @@ wait_till_free:
 ;inner function calls to save being repetitive
 csel_L:
     bcf PORTB, GLCD_CS1, A    ;clear the cs1 pin
+    call delay_250ns
     bsf PORTB, GLCD_CS2, A    ;set the cs2 pin
-    call delay_1us
+    ;call delay_1us
     return
 
 csel_R:
     bsf PORTB, GLCD_CS1, A    ;set the cs1 pin
+    call delay_250ns
     bcf PORTB, GLCD_CS2, A    ;clear the cs2 pin
-    call delay_1us
+    ;call delay_1us
     return
 
 ;timing stuff
 clock: ;set the clock to run (falling edge)
-    call delay_1us
+    ;call delay_1us
     bsf PORTB, GLCD_E, A
     call delay_1us
     bcf PORTB, GLCD_E, A
@@ -201,50 +208,25 @@ clock: ;set the clock to run (falling edge)
     return
    
 delay_1us: ;16 instructions * 4 Q cycles @ 64MHz = 1us delay
-    ;REPT 48
-	;nop
-    ;ENDM
-    nop
-    nop
-    nop
-    nop
-    nop
-    nop
-    nop
-    nop
-    nop
-    nop
-    nop
-    nop
-    nop
-    nop
-    nop
-    nop
-    nop
-    nop
-    nop
-    nop
-    nop
-    nop
-    nop
-    nop
-    nop
-    nop
-    nop
-    nop
-    nop
-    nop
-    nop
+    REPT 16
+	nop
+    ENDM
     return
     
 delay_ms_W:   ; delay given in ms in W
     movwf	count_ms, A
     REPT 4
-    LOCAL delay_inner_loop
-    delay_inner_loop:
-	movlw	250	    ; 1 ms delay
-	call	delay_1us	
-	decfsz	count_ms, A
-	bra	delay_inner_loop
-	return
+	LOCAL delay_inner_loop
+	delay_inner_loop:
+	    movlw	250	    ; 1 ms delay
+	    call	delay_1us	
+	    decfsz	count_ms, A
+	    bra	delay_inner_loop
+	    return
     ENDM
+    
+delay_250ns:
+    nop
+    nop
+    nop
+    return
