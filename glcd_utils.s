@@ -78,6 +78,14 @@ chip_select:
     bsf PORTB, GLCD_CS2, A
     call bossman_delay
     return
+
+chip_select_r:
+    call bossman_delay
+    bcf PORTB, GLCD_CS2, A
+    call bossman_delay
+    bsf PORTB, GLCD_CS1, A
+    call bossman_delay
+    return
     
 glcd_on:
     call bossman_delay
@@ -142,6 +150,7 @@ write_strip_W:
     call clock
     return
     
+    
 clock: ;set the clock to run (falling edge)
     call bossman_delay
     bsf PORTB, GLCD_E, A
@@ -154,9 +163,15 @@ clock: ;set the clock to run (falling edge)
     
 ; ** a few delay routines below here as LCD timing can be quite critical ****
 bossman_delay:
-    REPT 0xFF
-	call LCD_delay_ms
-    ENDM
+    ;REPT 0xFF
+	;call LCD_delay_ms
+    ;ENDM
+    nop
+    nop
+    nop
+    nop
+    return
+    
 LCD_delay_ms:		    ; delay given in ms in W
 	nop
 	movwf	LCD_cnt_ms, A
