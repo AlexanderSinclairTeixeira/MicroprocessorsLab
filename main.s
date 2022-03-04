@@ -21,19 +21,14 @@ setup:
     call ysel_W
     movlw 0x0
     call psel_W
-    movlw 0x4
-    movwf y_counter, A
     goto start
 
 start:
     movlw 0b00110011
     call write_strip_W
-    decfsz y_counter,A
+    incf glcd_page, A
+    movf glcd_page, W
+    call psel_W
     goto start
-    movlw 4
-    movlw 127
-    movwf y_counter, A
-    goto start
-    goto $
 
 end	    rst
