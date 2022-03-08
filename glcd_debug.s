@@ -7,7 +7,7 @@
 #define    GLCD_E   4 ;clock: cycle time 1us and triggers on falling edge
 #define    GLCD_RST 5 ;reset (active high so write 1 for reset)
 
-global glcd_setup, psel_W, ysel_W, write_strip_W, delay_ms_W
+global glcd_setup, psel_W, ysel_W, read_data, write_strip_W, delay_ms_W, delay_500ns, delay_1us
 global glcd_status, glcd_read, glcd_page, glcd_y, glcd_write
     
 psect udata_acs
@@ -30,13 +30,13 @@ glcd_setup:
     movlw 0x00
     movwf TRISB, A ;port B is output
     movwf TRISD, A ;port D is output
-    call delay_250ns
+    nop
     call glcd_on
     return
 
 glcd_on:
     bcf LATB, GLCD_RS, A ;instruction
-    call delay_250ns
+    nop
     bcf LATB, GLCD_RW, A ;writing
     movlw 0b00111111 ;last bit set for on
     movwf LATD, A
@@ -48,7 +48,7 @@ glcd_on:
     
 glcd_off:
     bcf PORTB, GLCD_RS, A ;instruction
-    call delay_250ns
+    nop
     bcf PORTB, GLCD_RW, A ;writing
     movlw 0b00111110 ;last bit clear for off
     movwf PORTD, A
@@ -68,11 +68,11 @@ ysel_W:
     call csel_R ;if it is set, we are in 64-127, so on the right chip
     
     bcf PORTB, GLCD_RS, A ;instruction
-    call delay_250ns
+    nop
     bcf PORTB, GLCD_RW, A ;writing
     movf glcd_y, W ; load up the y value
     bsf WREG, 6, A ;turn into desired instruction
-    call delay_250ns
+    nop
     movwf PORTD, A
     call clock
     return
@@ -80,16 +80,14 @@ ysel_W:
 psel_W:
     ;WREG contains a number from 0b000 - 0b111 i.e. the page number 0 - 7
     ;now set the page on the chip from the value in working register
-    IRP bitnum, 7, 6, 5, 4, 3
-	bcf WREG, bitnum, A ;make sure top bits are 0
-    ENDM
+    andlw 0b00000111 ;make sure the top bits are zero
     movwf glcd_page, A ;save the page number to RAM
     call csel_L ;assume left, i.e. 0 <= W < 64
     btfsc glcd_y, 6, A ;skip the next instruction if bit 6 of glcd_y is clear
     call csel_R ;if it is set, we are in 64-127, so on the right chip
 
     bcf PORTB, GLCD_RS, A ;instruction
-    call delay_250ns
+    nop
     bcf PORTB, GLCD_RW, A ;writing
     movf glcd_page, W ;load up the page number
     addlw 0b10111000 ;turn into page select instruction
@@ -110,13 +108,18 @@ write_strip_W:
     call csel_L ;assume left, i.e. 0 <= W < 64
     btfsc glcd_y, 6, A ;skip the next instruction if bit 6 of glcd_y is clear
     call csel_R ;if it is set, we are in 64-127, so on the right chip
-    call delay_250ns
+    nop
     
     bsf LATB, GLCD_RS, A ;data
-    call delay_250ns
+    nop
     bcf LATB, GLCD_RW, A ;writing
     movf glcd_write, W ; load up the write value
     movwf LATD, A
+    	call delay_1us
+	call delay_1us
+	call delay_1us
+	call delay_1us
+	call delay_1us
     call clock ; this increases the GLCD's internal y address automatically
     incf glcd_y, A
     bcf glcd_y, 7, A ;make sure top bit is 0 (overflows are a feature not a bug??)
@@ -130,11 +133,11 @@ read_data:
     call csel_R ;if it is set, we are in 64-127, so on the right chip
     
     bsf LATB, GLCD_RS, A ;data
-    call delay_250ns
+    nop
     bsf LATB, GLCD_RW, A ;reading
-    call delay_500ns
+    nop
     bsf LATB, GLCD_E, A ;send instruction
-    call delay_500ns
+    nop
     bcf LATB, GLCD_E, A ;clock on falling edge
     call delay_500ns
     movff PORTD, glcd_read, A ; and get the data from the port pins
@@ -155,13 +158,13 @@ read_status:
     call csel_R ;if it is set, we are in 64-127, so on the right chip
     
     bcf LATB, GLCD_RS, A ;instruction
-    call delay_250ns
+    nop
     bsf LATB, GLCD_RW, A ;reading
-    call delay_500ns
+    nop
     bsf LATB, GLCD_E, A ;send instruction
-    call delay_500ns
+    nop
     bcf LATB, GLCD_E, A ;clock on falling edge
-    call delay_500ns
+    nop
     movff PORTD, glcd_status, A ;and get the data from the port pins
     movlw 0x00
     movwf TRISD, A;PORTD back to output
@@ -176,14 +179,14 @@ wait_till_free:
 ;inner function calls to save being repetitive
 csel_L:
     bcf LATB, GLCD_CS1, A    ;clear the cs1 pin
-    call delay_250ns
+    nop
     bsf LATB, GLCD_CS2, A    ;set the cs2 pin
     ;call delay_250ns
     return
 
 csel_R:
     bsf LATB, GLCD_CS1, A    ;set the cs1 pin
-    call delay_250ns
+    nop
     bcf LATB, GLCD_CS2, A    ;clear the cs2 pin
     ;call delay_250ns
     return
@@ -198,27 +201,34 @@ clock: ;set the clock to run (falling edge)
     return
 
 delay_ms_W:   ; delay given in ms in W
+    ; when W=0, about 600ns
+    ; when W=1, about 1.0009ms
+    ; when W=250, about 250.03ms
     movwf	count_ms, A
-    REPT 4
-	LOCAL delay_inner_loop
-	delay_inner_loop:
-	    movlw	250	    ; 1 ms delay
-	    call	delay_500ns	
-	    call	delay_500ns	
-	    decfsz	count_ms, A
-	    bra	delay_inner_loop
-	    return
-    ENDM
+    addlw 0x00 ; set the zero flag if W is clear
+    btfsc STATUS, 2, A ;2 is zero bit
+	return
+    delay_1_ms:
+	REPT 4 ; 1 ms
+	    movlw	250 ;250us
+	    LOCAL delay_inner_loop
+	    delay_inner_loop: ; 1us
+		call	delay_1us		
+		addlw 0xFF ;decrement W (using 2's complement)
+		bnz	delay_inner_loop ;check zero flag 
+	ENDM
+	decfsz count_ms, A
+	    goto delay_1_ms
     return
     
-delay_250ns: ;4 instructions * 4 Q cycles @ 64MHz = 250ns delay
+delay_500ns: ;actually closer to about 600ns
     nop
     nop
     nop
     return
     
-delay_500ns: ;8 instructions * 4 Q cycles @ 64MHz = 500ns delay
-    REPT 7
+delay_1us: ;8 instructions * 4 Q cycles @ 64MHz = 500ns delay
+    REPT 9
 	nop
     ENDM
     return
