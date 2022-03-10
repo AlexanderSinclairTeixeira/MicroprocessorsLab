@@ -11,12 +11,12 @@ global glcd_setup, psel_W, ysel_W, read_data, write_strip_W, delay_ms_W, delay_5
 global glcd_status, glcd_read, glcd_page, glcd_y, glcd_write
     
 psect udata_acs
-    glcd_status EQU 0x00
-    glcd_read EQU 0x01
-    glcd_page EQU 0x02
-    glcd_y EQU 0x03
-    glcd_write EQU 0x04
-    count_ms EQU 0x05
+    glcd_status EQU 0x00 ;last status read
+    glcd_read EQU 0x01 ;last data read
+    glcd_page EQU 0x02 ;page number 0-7
+    glcd_y EQU 0x03 ;y-coordinate 0-127
+    glcd_write EQU 0x04 ;value to write
+    count_ms EQU 0x05 ;ms left in delay
  
 psect glcd_code, class=CODE
 
@@ -89,7 +89,7 @@ psel_W:
     bcf PORTB, GLCD_RS, A ;instruction
     nop
     bcf PORTB, GLCD_RW, A ;writing
-    movf glcd_page, W ;load up the page number
+    movf glcd_page, W, A ;load up the page number
     addlw 0b10111000 ;turn into page select instruction
     movwf PORTD, A
     call clock
@@ -104,7 +104,7 @@ psel_W:
 write_strip_W:
     ;write a pixel strip from W to glcd ram
     ;increases y address automatically
-    movwf glcd_write
+    movwf glcd_write, A
     call csel_L ;assume left, i.e. 0 <= W < 64
     btfsc glcd_y, 6, A ;skip the next instruction if bit 6 of glcd_y is clear
     call csel_R ;if it is set, we are in 64-127, so on the right chip
@@ -113,13 +113,8 @@ write_strip_W:
     bsf LATB, GLCD_RS, A ;data
     nop
     bcf LATB, GLCD_RW, A ;writing
-    movf glcd_write, W ; load up the write value
+    movf glcd_write, W, A ; load up the write value
     movwf LATD, A
-    	call delay_1us
-	call delay_1us
-	call delay_1us
-	call delay_1us
-	call delay_1us
     call clock ; this increases the GLCD's internal y address automatically
     incf glcd_y, A
     bcf glcd_y, 7, A ;make sure top bit is 0 (overflows are a feature not a bug??)
@@ -193,11 +188,15 @@ csel_R:
 
 ;timing stuff
 clock: ;set the clock to run (falling edge)
-    call delay_500ns
+	call delay_1us
+	call delay_1us
+	call delay_1us
+	call delay_1us
+    call delay_1us
     bsf LATB, GLCD_E, A
-    call delay_500ns
+    call delay_1us
     bcf LATB, GLCD_E, A
-    call delay_500ns
+    call delay_1us
     return
 
 delay_ms_W:   ; delay given in ms in W

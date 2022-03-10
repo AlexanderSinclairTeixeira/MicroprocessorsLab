@@ -3,14 +3,16 @@
 extrn psel_W, ysel_W, read_data, write_strip_W, delay_ms_W, delay_1us;functions
 extrn glcd_status, glcd_read, glcd_page, glcd_y, glcd_write ;variables
 
-global glcd_set_all, glcd_clr_all, glcd_set_pixel_W, glcd_clear_pixel_W, glcd_set_rect, glcd_clear_rect
-global glcd_bitnum, glcd_x, glcd_a, glcd_b
+global glcd_set_all, glcd_set_pixel_W, glcd_set_rect, glcd_set_8x8_block
+global glcd_clr_all, glcd_clr_pixel_W, glcd_clr_rect, glcd_clr_8x8_block
+global glcd_bitnum, glcd_x, glcd_dx, glcd_dy, glcd_Y
 
 psect udata_acs
     glcd_bitnum EQU 0x06
-    glcd_x EQU 0x07
-    glcd_a EQU 0x08
-    glcd_b EQU 0x09
+    glcd_x EQU 0x07 ;x-coord of pixel
+    glcd_dx EQU 0x08 ;change in x rect
+    glcd_dy EQU 0x09 ;change in y rect
+    glcd_Y EQU 0x0B ;block y from 0 to 15
  
 psect glcd_code, class=CODE
  
@@ -20,16 +22,16 @@ glcd_set_all:
     movlw 0x00
     call ysel_W
     start_page_set:
-	movf glcd_page, W
+	movf glcd_page, W, A
 	call psel_W
-	movf glcd_y, W
+	movf glcd_y, W, A
 	call ysel_W
 	movlw 0xFF ;;;;;;;;;;;;;
 	call write_strip_W
 	tstfsz glcd_y, A
 	    goto start_page_set
     incf glcd_page, A
-    movf glcd_page, W
+    movf glcd_page, W, A
     andlw 0b00000111 ;make the top bits all zero
     tstfsz WREG, A ;check if page number has overflowed
 	goto start_page_set
@@ -41,16 +43,16 @@ glcd_clr_all:
     movlw 0x00
     call ysel_W
     start_page_clr:
-	movf glcd_page, W
+	movf glcd_page, W, A
 	call psel_W
-	movf glcd_y, W
+	movf glcd_y, W, A
 	call ysel_W
 	movlw 0x00 ;;;;;;;;;;;;;;;
 	call write_strip_W
 	tstfsz glcd_y, A
 	    goto start_page_clr
     incf glcd_page, A
-    movf glcd_page, W
+    movf glcd_page, W, A
     andlw 0b00000111 ;make the top bits all zero
     tstfsz WREG, A ;check if page number has overflowed
 	goto start_page_clr
@@ -65,24 +67,94 @@ glcd_set_pixel_W:
     rrncf WREG, W, A
     rrncf WREG, W, A
     call psel_W ;automatically handles clearing the top 3 bits
-    movlw glcd_y
+    movf glcd_y, W, A
+    call ysel_W
+    call read_data
+    movf glcd_x, W, A
+    andlw 0b00000111 ;keep only bottom 3, this is the bitnum
+    movwf glcd_bitnum, A
+    call bin_to_idx ;convert glcd_bitnum to index in-place
+    movf glcd_read, W, A
+    iorwf glcd_bitnum, W, A
+    call write_strip_W
+    return
+
+glcd_clr_pixel_W:
+    ;Using an x value in W, with glcd_y already set
+    ;x goes from 0-63, i.e. 0b00000000 - 0b00111111
+    andlw 0b00111111 ;set top two to zero
+    movwf glcd_x, A
+    rrncf WREG, W, A ;divide by 8 to get page number
+    rrncf WREG, W, A
+    rrncf WREG, W, A
+    call psel_W ;automatically handles clearing the top 3 bits
+    movf glcd_y, W, A
     call ysel_W
     call read_data
     movf glcd_x, A
     andlw 0b00000111 ;keep only bottom 3, this is the bitnum
     movwf glcd_bitnum, A
-;    bsf glcd_read, WREG, A
-    movf glcd_read, A
+    call bin_to_idx ;convert glcd_bitnum to index in-place
+    comf glcd_bitnum, A ;invert because we want to clear this bit
+    movf glcd_read, W, A
+    andwf glcd_bitnum, W, A
     call write_strip_W
-    return
-
-glcd_clear_pixel_W:
     return
     
 glcd_set_rect:
+    ;glcd_x, glcd_y, glcd_dx, glcd_dy all set already
+    movf glcd_y, A
+    call psel_W
     return
 
-glcd_clear_rect:
+glcd_clr_rect:
     return
 
+glcd_set_8x8_block:
+    ;paint an 8x8 block with glcd_Y already set
+    movf glcd_Y, W, A ;must be 0 - 15, i.e. 0b00000000 to 0b00001111
+    andlw 0b00001111 ;make sure it doesnt overflow
+    rlncf WREG, W, A ;multiply by 8
+    rlncf WREG, W, A
+    rlncf WREG, W, A
+    call ysel_W
+    movf glcd_page, W, A
+    call psel_W
+    movlw 0xFF
+    REPT 8
+        call write_strip_W
+    ENDM    
+    return
     
+glcd_clr_8x8_block:
+        ;paint an 8x8 block with glcd_Y already set
+    movf glcd_Y, W, A ;must be 0 - 15, i.e. 0b00000000 to 0b00001111
+    andlw 0b00001111 ;make sure it doesnt overflow
+    rlncf WREG, W, A ;multiply by 8
+    rlncf WREG, W, A
+    rlncf WREG, W, A
+    call ysel_W
+    movf glcd_page, W, A
+    call psel_W
+    movlw 0x00
+    REPT 8
+        call write_strip_W
+    ENDM    
+    return
+
+
+;;;;;;;;;;;;;;
+bin_to_idx:
+    movlw 0xFF
+    incf WREG, A ; W=0 and carry=1
+    shift_loop:
+	tstfsz glcd_bitnum, A
+	    goto shift
+	movwf glcd_bitnum, A
+	return
+    shift:
+	rlcf WREG, W, A
+	decfsz glcd_bitnum, A;doesnt affect the zero flag
+	nop
+	goto shift_loop
+	

@@ -3,8 +3,9 @@
 extrn glcd_setup, psel_W, ysel_W, write_strip_W, delay_ms_W, delay_500ns, delay_1us
 extrn glcd_status, glcd_read, glcd_page, glcd_y
     
-extrn glcd_set_all, glcd_clr_all, glcd_set_pixel_W, glcd_clear_pixel_W, glcd_set_rect, glcd_clear_rect
-extrn glcd_bitnum, glcd_x, glcd_a, glcd_b
+extrn glcd_set_all, glcd_set_pixel_W, glcd_set_rect, glcd_set_8x8_block
+extrn glcd_clr_all, glcd_clr_pixel_W, glcd_clr_rect, glcd_clr_8x8_block
+extrn glcd_bitnum, glcd_x, glcd_dx, glcd_dy, glcd_Y
 
 
 
@@ -21,38 +22,26 @@ int_hi:
     org 0x08	;high interrupt vector
     
 setup:
-    call glcd_setup
-    call glcd_clr_all    
+    call glcd_setup ;initialises ports B and D, turns on both controllers
+    call glcd_clr_all ;clears the whole screen
     movlw 0x00
-    movwf TRISC, A
+    movwf TRISC, A ;initialise port C for output
     movwf LATC, A
     
+    movlw 2
+    movwf glcd_Y, A
+    movlw 3
+    movwf glcd_page, A
+    call glcd_set_8x8_block
     goto start
 
 start:
-;    goto start
-    call glcd_set_all
-    comf LATC, A
-    call glcd_clr_all
-    comf LATC, A
+    movlw 0xFF
+    call delay_ms_W
+    ;call glcd_clr_8x8_block
+    incf glcd_Y, A
+    ;incf glcd_page, A
+    call glcd_set_8x8_block
     goto start
-    
-;	goto $
-;	movf glcd_page, W, A
-;	call psel_W
-;	movf glcd_y, W, A
-;	call ysel_W
-;	movf write_val, W, A
-;	call write_strip_W
-;	incf write_val, A
-;	tstfsz glcd_y, A
-;	    goto start
-;    incf glcd_page, A
-;    movf glcd_page, W, A
-;    call psel_W
-;    movlw 0x00
-;    movwf write_val, A
-;    movwf glcd_y, A
-;    goto start
 
 end	    rst
