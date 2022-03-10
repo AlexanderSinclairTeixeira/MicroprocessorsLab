@@ -1,24 +1,23 @@
-	#include <xc.inc>
+#include <xc.inc>
 
-psect	code, abs
-	
-main:
-	org	0x0
-	goto	start
+extrn pos_start, switch_dirn    
 
-	org	0x100		    ; Main code starts here at address 0x100
+psect code, abs
+rst:
+    org 0x0
+    goto setup
+    
+setup:
+    movlw 0x00
+    movwf TRISH, A ;xpos output
+    movwf TRISJ, A ;ypos output
+    movwf TRISE, A ;dirn output
+    movlw 0xFF
+    movwf TRISF, A ; input
+    call pos_start
+
 start:
-	movlw 	0x0
-	movwf	TRISB, A	    ; Port C all outputs
-	bra 	test
-loop:
-	movff 	0x06, PORTB
-	incf 	0x06, W, A
-test:
-	movwf	0x06, A	    ; Test for end of loop condition
-	movlw 	0x63
-	cpfsgt 	0x06, A
-	bra 	loop		    ; Not yet finished goto start of loop again
-	goto 	0x0		    ; Re-run program from start
-
-	end	main
+    call switch_dirn
+    goto start
+    
+end	rst
