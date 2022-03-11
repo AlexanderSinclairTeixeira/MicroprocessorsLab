@@ -11,12 +11,12 @@ global glcd_setup, psel_W, ysel_W, read_data, write_strip_W, delay_ms_W, delay_5
 global glcd_status, glcd_read, glcd_page, glcd_y, glcd_write
     
 psect udata_acs
-    glcd_status EQU 0x00 ;last status read
-    glcd_read EQU 0x01 ;last data read
-    glcd_page EQU 0x02 ;page number 0-7
-    glcd_y EQU 0x03 ;y-coordinate 0-127
-    glcd_write EQU 0x04 ;value to write
-    count_ms EQU 0x05 ;ms left in delay
+    glcd_status EQU 0x10 ;last status read
+    glcd_read EQU 0x11 ;last data read
+    glcd_page EQU 0x12 ;page number 0-7
+    glcd_y EQU 0x13 ;y-coordinate 0-127
+    glcd_write EQU 0x14 ;value to write
+    count_ms EQU 0x15 ;ms left in delay
  
 psect glcd_code, class=CODE
 

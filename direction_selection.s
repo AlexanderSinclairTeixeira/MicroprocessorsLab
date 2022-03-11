@@ -1,40 +1,46 @@
 #include <xc.inc>
   
-#define left 1 ;label some useful terms
-#define right 2
-#define up 3
-#define down 4
+left EQU 1 ;label some useful terms
+right EQU 2
+up EQU 3
+down EQU 4
 
 #define x_max 7
 #define y_max 15
 
-global pos_start, switch_dirn
+global pos_start, switch_dirn ;funcs
+global x_pos, y_pos, dirn, left, right, up, down ;vars
 
 psect udata_acs
+    left EQU 1 ;for literal use only
+    right EQU 2 ;for literal use only
+    up EQU 3 ;for literal use only
+    down EQU 4 ;for literal use only
+
     x_pos EQU 0x20
     y_pos EQU 0x21
     dirn EQU 0x22 ; save a byte in memory for storing the direction
  
 psect game_code, class=CODE
 pos_start:
+    movlw 0xFF
+    movwf TRISC
     ;set the initial coordiantes
     movlw 3
     movwf x_pos, A
     movwf y_pos, A
-    movwf PORTH, A
-    movwf PORTJ, A
+    ;movwf PORTH, A
+    ;movwf PORTJ, A
     ;set the initial direction
     movlw right
     movwf dirn, A
     return
    
 switch_dirn:
-    ;movf PORTF, W, A
-    ;movwf direct, A
-    ;movf direct, W, A
-    ;movwf LATE, A
-    
-    ;;;;;;movff PORTF, dirn, A
+    movf PORTC, W
+    addlw 0b11000000
+    movwf dirn, A
+    ;;;;;;movff PORTC, dirn, A
     
     ;is direction == left??
     movlw left
@@ -62,9 +68,9 @@ switch_dirn:
    
     output_posn: ;output x to port H and y to port J
 	movf x_pos, W, A
-	movwf PORTJ, A
+	;movwf PORTJ, A
 	movf y_pos, W, A
-	movwf PORTH, A
+	;movwf PORTH, A
     return
    
 p_left:

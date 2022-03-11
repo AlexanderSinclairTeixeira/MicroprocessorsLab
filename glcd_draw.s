@@ -8,11 +8,11 @@ global glcd_clr_all, glcd_clr_pixel_W, glcd_clr_rect, glcd_clr_8x8_block
 global glcd_bitnum, glcd_x, glcd_dx, glcd_dy, glcd_Y
 
 psect udata_acs
-    glcd_bitnum EQU 0x06
-    glcd_x EQU 0x07 ;x-coord of pixel
-    glcd_dx EQU 0x08 ;change in x rect
-    glcd_dy EQU 0x09 ;change in y rect
-    glcd_Y EQU 0x0B ;block y from 0 to 15
+    glcd_bitnum EQU 0x16
+    glcd_x EQU 0x17 ;x-coord of pixel
+    glcd_dx EQU 0x18 ;change in x rect
+    glcd_dy EQU 0x19 ;change in y rect
+    glcd_Y EQU 0x1A ;block y from 0 to 15
  
 psect glcd_code, class=CODE
  
