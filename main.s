@@ -8,7 +8,7 @@ extrn glcd_clr_all, glcd_clr_pixel_W, glcd_clr_rect, glcd_clr_8x8_block ;GLCD cl
 extrn glcd_bitnum, glcd_x, glcd_dx, glcd_dy, glcd_Y ;GLCD draw vars
 
 extrn pos_start, switch_dirn ;funcs
-extrn x_pos, y_pos, dirn, left, right, up, down ;vars
+extrn x_pos, y_pos, dirn, left, right, up, down, hit_border ;vars
     
 psect udata_acs
     tempvar EQU 0x00
@@ -32,19 +32,26 @@ setup:
     goto start
 
 start:
-    ;movff PORTC, dirn, A
-    ; ----OR-----
+    movlw 0xFF
+    call delay_ms_W
     movf PORTC, W
-    ;addlw 0b11000000
-    ;sublw 0x40
-    ;addlw 0xFF
-    ;comf WREG, W
-    movwf dirn, A
-    
+    tstfsz WREG, A
+        movwf dirn, A
     call switch_dirn
-    movff y_pos, glcd_Y
-    movff x_pos, glcd_page
+    btfsc hit_border, 0, A
+	goto game_over
     call glcd_set_8x8_block
     goto start
+    
+game_over:
+    call glcd_set_all
+    movlw 0xFF
+    call delay_ms_W
+    movlw 0xFF
+    call delay_ms_W
+    movlw 0xFF
+    call delay_ms_W
+    goto setup
+
 
 end	main
