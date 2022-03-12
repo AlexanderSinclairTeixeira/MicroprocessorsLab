@@ -2,11 +2,7 @@
 
 extrn glcd_set_all, glcd_clr_all, delay_ms_W
 extrn glcd_page, glcd_Y
-    
-left EQU 1 ;label some useful terms
-right EQU 2
-up EQU 3
-down EQU 4
+
 
 #define x_max 7
 #define y_max 15
@@ -17,8 +13,8 @@ global x_pos, y_pos, dirn, left, right, up, down, hit_border ;vars
 psect udata_acs
     left EQU 1 ;for literal use only
     right EQU 2 ;for literal use only
-    up EQU 3 ;for literal use only
-    down EQU 4 ;for literal use only
+    up EQU 4 ;for literal use only
+    down EQU 8 ;for literal use only
 
     x_pos EQU 0x20
     y_pos EQU 0x21
@@ -28,8 +24,10 @@ psect udata_acs
 psect game_code, class=CODE
 pos_start:
     call glcd_clr_all
-    movlw 0xFF
-    movwf TRISC
+    ;movlw 0xFF 
+    ;movwf TRISE, A ;configure port E as an output
+    ;banksel PADCFG1 ;select the bank for pullup cofig
+    ;bcf PADCFG1, 6, B ;clearing bit 6 in PADCFG1 activates the weak pullup resistors
     ;set the initial coordiantes
     movlw 3
     movwf x_pos, A

@@ -29,12 +29,18 @@ setup:
     movff y_pos, glcd_Y
     movff x_pos, glcd_page
     call glcd_set_8x8_block
+    banksel PADCFG1
+    bsf REPU
+    clrf LATE
+    banksel 0
+    movlw 0xff
+    movwf TRISE
     goto start
 
 start:
     movlw 0xFF
     call delay_ms_W
-    movf PORTC, W
+    comf PORTE, W
     tstfsz WREG, A
         movwf dirn, A
     call switch_dirn
