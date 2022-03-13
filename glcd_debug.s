@@ -10,7 +10,7 @@
 global glcd_setup, psel_W, ysel_W, read_data, write_strip_W, delay_ms_W, delay_500ns, delay_1us
 global glcd_status, glcd_read, glcd_page, glcd_y, glcd_write
     
-psect udata_acs
+psect udata_acs ;can use 0x10-0x1F, but share with glcd_draw and ascii_5x8
     glcd_status EQU 0x10 ;last status read
     glcd_read EQU 0x11 ;last data read
     glcd_page EQU 0x12 ;page number 0-7

@@ -6,16 +6,15 @@ extrn glcd_page, glcd_Y
 
 #define x_max 7
 #define y_max 15
+#define left 1 ;for literal use only
+#define right 2 ;for literal use only
+#define up 4 ;for literal use only
+#define down 8 ;for literal use only
 
 global pos_start, switch_dirn ;funcs
-global x_pos, y_pos, dirn, left, right, up, down, hit_border ;vars
+global x_pos, y_pos, dirn, hit_border ;vars
 
-psect udata_acs
-    left EQU 1 ;for literal use only
-    right EQU 2 ;for literal use only
-    up EQU 4 ;for literal use only
-    down EQU 8 ;for literal use only
-
+psect udata_acs ;can use 0x20-0x2F
     x_pos EQU 0x20
     y_pos EQU 0x21
     dirn EQU 0x22 ; save a byte in memory for storing the direction
@@ -38,7 +37,7 @@ pos_start:
     movlw right
     movwf dirn, A
     movlw 0
-    movwf hit_border
+    movwf hit_border, A
     return
    
 switch_dirn:

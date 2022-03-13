@@ -7,7 +7,7 @@ global glcd_set_all, glcd_set_pixel_W, glcd_set_rect, glcd_set_8x8_block
 global glcd_clr_all, glcd_clr_pixel_W, glcd_clr_rect, glcd_clr_8x8_block
 global glcd_bitnum, glcd_x, glcd_dx, glcd_dy, glcd_Y
 
-psect udata_acs
+psect udata_acs ;can use 0x10-0x1F, but share with glcd_debug and ascii_5x8
     glcd_bitnum EQU 0x16
     glcd_x EQU 0x17 ;x-coord of pixel
     glcd_dx EQU 0x18 ;change in x rect
