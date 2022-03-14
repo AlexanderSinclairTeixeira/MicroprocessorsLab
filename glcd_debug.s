@@ -79,20 +79,19 @@ ysel_W:
     
 psel_W:
     ;WREG contains a number from 0b000 - 0b111 i.e. the page number 0 - 7
-    ;now set the page on the chip from the value in working register
+    ;now set the page on both chips from the value in working register
     andlw 0b00000111 ;make sure the top bits are zero
     movwf glcd_page, A ;save the page number to RAM
-    call csel_L ;assume left, i.e. 0 <= W < 64
-    btfsc glcd_y, 6, A ;skip the next instruction if bit 6 of glcd_y is clear
-    call csel_R ;if it is set, we are in 64-127, so on the right chip
-
-    bcf PORTB, GLCD_RS, A ;instruction
-    nop
-    bcf PORTB, GLCD_RW, A ;writing
-    movf glcd_page, W, A ;load up the page number
-    addlw 0b10111000 ;turn into page select instruction
-    movwf PORTD, A
-    call clock
+    IRP chip_select, csel_L, csel_R
+	call chip_select
+	bcf PORTB, GLCD_RS, A ;instruction
+	nop
+	bcf PORTB, GLCD_RW, A ;writing
+	movf glcd_page, W, A ;load up the page number
+	addlw 0b10111000 ;turn into page select instruction
+	movwf PORTD, A
+	call clock
+    ENDM
     return
     
 ;display_start:
@@ -116,7 +115,7 @@ write_strip_W:
     movf glcd_write, W, A ; load up the write value
     movwf LATD, A
     call clock ; this increases the GLCD's internal y address automatically
-    incf glcd_y, A
+    incf glcd_y, F
     bcf glcd_y, 7, A ;make sure top bit is 0 (overflows are a feature not a bug??)
     return
 

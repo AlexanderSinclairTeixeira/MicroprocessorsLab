@@ -94,7 +94,7 @@ psect	ascii_code, class=CODE
 	return
 
     ascii_write_W:
-	;with glcd_y and glcd_page already set, write the ascii from W to the screen
+	;with initial glcd_y and glcd_page already set, write the ascii from W to the screen
 	; (space)!()*+,-./0123456789<=>?@ABCDEFGHIJKLMNOPQRSTUVQXYZ
 	;these have ascii values of (in order)
 	;32-33, 40-47, 48-57 (numbers 0-9), 60-64, 65-90 (uppercase letters)

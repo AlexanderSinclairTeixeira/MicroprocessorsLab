@@ -46,7 +46,6 @@ event_loop:
     movlw 0xFF
     call delay_ms_W
     comf PORTE, W
-    movlw 1 ;;;;;;;;;for simulator only
     tstfsz WREG, A
         movwf dirn, A
     call switch_dirn
