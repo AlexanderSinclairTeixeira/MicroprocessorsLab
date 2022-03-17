@@ -1,6 +1,5 @@
 #include <xc.inc>
 
-extrn glcd_set_all, glcd_clr_all, delay_ms_W
 extrn glcd_page, glcd_Y
 
 
@@ -22,17 +21,10 @@ psect udata_acs ;can use 0x20-0x2F
  
 psect game_code, class=CODE
 pos_start:
-    call glcd_clr_all
-    ;movlw 0xFF 
-    ;movwf TRISE, A ;configure port E as an output
-    ;banksel PADCFG1 ;select the bank for pullup cofig
-    ;bcf PADCFG1, 6, B ;clearing bit 6 in PADCFG1 activates the weak pullup resistors
     ;set the initial coordiantes
     movlw 3
     movwf x_pos, A
     movwf y_pos, A
-    ;movwf PORTH, A
-    ;movwf PORTJ, A
     ;set the initial direction
     movlw right
     movwf dirn, A
@@ -41,11 +33,6 @@ pos_start:
     return
    
 switch_dirn:
-    ;movf PORTC, W
-    ;addlw 0b11000000
-    ;movwf dirn, A
-    ;;;;;;movff PORTC, dirn, A
-    
     ;is direction == left??
     movlw left
     subwf dirn, W, A
