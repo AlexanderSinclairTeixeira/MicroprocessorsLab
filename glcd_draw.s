@@ -3,7 +3,7 @@
 extrn psel_W, ysel_W, read_data, write_strip_W, delay_ms_W, delay_1us;functions
 extrn glcd_status, glcd_read, glcd_page, glcd_y, glcd_write ;variables
 
-global glcd_set_all, glcd_set_pixel_W, glcd_set_rect, glcd_set_8x8_block
+global glcd_set_all, glcd_set_pixel_W, glcd_set_rect, glcd_set_8x8_block, glcd_draw_apple
 global glcd_clr_all, glcd_clr_pixel_W, glcd_clr_rect, glcd_clr_8x8_block
 global glcd_bitnum, glcd_x, glcd_dx, glcd_dy, glcd_Y
 
@@ -142,6 +142,33 @@ glcd_clr_8x8_block:
     ENDM    
     return
 
+glcd_draw_apple:
+    ;paint an 8x8 apple with glcd_Y already set
+    movf glcd_Y, W, A ;must be 0 - 15, i.e. 0b00000000 to 0b00001111
+    andlw 0b00001111 ;make sure it doesnt overflow
+    rlncf WREG, W, A ;multiply by 8
+    rlncf WREG, W, A
+    rlncf WREG, W, A
+    call ysel_W
+    movf glcd_page, W, A
+    call psel_W
+    movlw 0x00
+    call write_strip_W
+    movlw 0x1E
+    call write_strip_W 
+    movlw 0x37
+    call write_strip_W
+    movlw 0x2F
+    call write_strip_W 
+    movlw 0x7F
+    call write_strip_W
+    movlw 0xBF
+    call write_strip_W 
+    movlw 0x9E
+    call write_strip_W
+    movlw 0x00
+    call write_strip_W 
+    return
 
 ;;;;;;;;;;;;;;
 bin_to_idx:

@@ -3,16 +3,22 @@
 extrn glcd_setup, psel_W, ysel_W, read_data, write_strip_W, delay_ms_W ;GLCD functions
 extrn glcd_status, glcd_read, glcd_page, glcd_y, glcd_write ;GLCD variables
 
-extrn glcd_set_all, glcd_set_pixel_W, glcd_set_rect, glcd_set_8x8_block ;GLCD set funcs
+extrn glcd_set_all, glcd_set_pixel_W, glcd_set_rect, glcd_set_8x8_block, glcd_draw_apple ;GLCD set funcs
 extrn glcd_clr_all, glcd_clr_pixel_W, glcd_clr_rect, glcd_clr_8x8_block ;GLCD clr funcs
 extrn glcd_bitnum, glcd_x, glcd_dx, glcd_dy, glcd_Y ;GLCD draw vars
 
-extrn pos_start, switch_dirn ;funcs
-extrn x_pos, y_pos, dirn, hit_border ;vars
+extrn pos_start, switch_dirn ;direction funcs
+extrn x_pos, y_pos, dirn, hit_border ;direection vars
 
-extrn ascii_setup, ascii_write_W
+extrn ascii_setup, ascii_write_W ;ascii funcs
+
+extrn     
     
-psect udata_acs ;can use 0x00-0x0F
+psect udata_acs
+ ;main can use 0x00-0x0F
+ ;glcd_debug, glcd_draw and ascii_5x8 all share 0x10-0x1F
+ ;direction_selection can use 0x20-0x2F
+ ;apples can use 0x30-0x3F
     tempvar EQU 0x00
 
 psect	code, abs	
