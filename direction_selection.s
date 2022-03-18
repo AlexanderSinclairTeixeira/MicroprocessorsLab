@@ -3,33 +3,34 @@
 extrn glcd_page, glcd_Y
 
 
-#define x_max 7
-#define y_max 15
+#define X_max 7
+#define Y_max 15
 #define left 1 ;for literal use only
 #define right 2 ;for literal use only
 #define up 4 ;for literal use only
 #define down 8 ;for literal use only
 
 global pos_start, switch_dirn ;funcs
-global x_pos, y_pos, dirn, hit_border ;vars
+global head_X, head_Y, dirn, hit_border ;vars
 
-psect udata_acs ;can use 0x20-0x2F
-    x_pos EQU 0x20
-    y_pos EQU 0x21
+psect udata_acs ;can use 0x20-0x2F, but share with apples
+    head_X EQU 0x20
+    head_Y EQU 0x21
     dirn EQU 0x22 ; save a byte in memory for storing the direction
-    hit_border EQU 0x23 ;have we hit the border?
+    dirn_last_valid EQU 0x23
+    hit_border EQU 0x24 ;have we hit the border?
  
 psect game_code, class=CODE
 pos_start:
     ;set the initial coordiantes
     movlw 3
-    movwf x_pos, A
+    movwf head_X, A
     movlw 1
-    movwf y_pos, A
-    movwf y_pos, A
+    movwf head_Y, A
     ;set the initial direction
     movlw right
     movwf dirn, A
+    movwf dirn_last_valid, A
     movlw 0
     movwf hit_border, A
     return
@@ -58,44 +59,46 @@ switch_dirn:
     subwf dirn, W, A
     btfsc STATUS, 2 , A ;2 is zero bit
 	goto p_down
-   
-    update_posn:
-	movf x_pos, W
-	movwf glcd_page, A
-	movf y_pos, W, A
-	movwf glcd_Y, A
-    return
+    
+    ;direction is neither of these so use last valid direction and switch again
+    movff dirn_last_valid, dirn
+    goto switch_dirn
+
    
 p_left:
-    movf y_pos, W, A
+    movf head_Y, W, A
     addlw 0x00 ; update the zero flag
     btfsc STATUS, 2, A ;2 is zero bit
 	comf hit_border, A ;is it is set, we have reached zero so game over
-    decf y_pos, F, A ;otherwise decrement y
-    goto update_posn
+    decf head_Y, F, A ;otherwise decrement y
+    movff dirn, dirn_last_valid ;update the last valid direction with this newest value
+    return
    
 p_right:
-    movlw y_max ;moves 15 to W
-    subwf y_pos, W, A ;f - W -> W, i.e. y_pos - y_max
+    movlw Y_max ;moves 15 to W
+    subwf head_Y, W, A ;f - W -> W, i.e. head_Y - Y_max
     btfsc STATUS, 0, A ;zero is carry bit
-	comf hit_border, A;is it is set, we have reached y_max so game over
-    incf y_pos, F, A
-    goto update_posn
+	comf hit_border, A;is it is set, we have reached Y_max so game over
+    incf head_Y, F, A
+    movff dirn, dirn_last_valid ;update the last valid direction with this newest value
+    return
     
 p_up:
-    movf x_pos, W, A
+    movf head_X, W, A
     addlw 0x00
     btfsc STATUS, 2, A ;2 is zero bit
 	comf hit_border, A;is it is set, we have reached zero so game over
     movlw 1
-    subwf x_pos, F, A
-    goto update_posn
+    subwf head_X, F, A
+    movff dirn, dirn_last_valid ;update the last valid direction with this newest value
+    return
    
 p_down:
-    movlw x_max
-    subwf x_pos, W, A
+    movlw X_max
+    subwf head_X, W, A
     btfsc STATUS, 0, A ;zero is carry bit
-	comf hit_border, A;is it is set, we have reached x_max so game over
+	comf hit_border, A;is it is set, we have reached X_max so game over
     movlw 1
-    addwf x_pos, F, A
-    goto update_posn
+    addwf head_X, F, A
+    movff dirn, dirn_last_valid ;update the last valid direction with this newest value
+    return

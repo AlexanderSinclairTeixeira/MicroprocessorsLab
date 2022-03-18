@@ -17,9 +17,9 @@
       <itemPath>direction_selection.s</itemPath>
       <itemPath>buffer.s</itemPath>
       <itemPath>apples.s</itemPath>
-      <itemPath>ascii_5x8.s</itemPath>
-      <itemPath>glcd_debug.s</itemPath>
       <itemPath>glcd_draw.s</itemPath>
+      <itemPath>glcd_basic.s</itemPath>
+      <itemPath>glcd_ascii.s</itemPath>
     </logicalFolder>
     <logicalFolder name="ExternalFiles"
                    displayName="Important Files"
@@ -82,6 +82,7 @@
                   value="Press to browse for a specific firmware version"/>
         <property key="ToolFirmwareOption.UseLatestFirmware" value="true"/>
         <property key="debugoptions.useswbreakpoints" value="true"/>
+        <property key="firmware.download.all" value="false"/>
         <property key="hwtoolclock.frcindebug" value="false"/>
         <property key="memories.aux" value="false"/>
         <property key="memories.bootflash" value="false"/>

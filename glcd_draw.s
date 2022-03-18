@@ -3,10 +3,8 @@
 extrn psel_W, ysel_W, read_data, write_strip_W, delay_ms_W, delay_1us;functions
 extrn glcd_status, glcd_read, glcd_page, glcd_y, glcd_write ;variables
 
-extrn apple_X, apple_Y ;vars
-
-global glcd_set_all, glcd_set_pixel_W, glcd_set_rect, glcd_set_8x8_block, glcd_draw_apple
-global glcd_clr_all, glcd_clr_pixel_W, glcd_clr_rect, glcd_clr_8x8_block
+global glcd_set_all, glcd_set_pixel_W, glcd_set_8x8_block, glcd_draw_apple
+global glcd_clr_all, glcd_clr_pixel_W, glcd_clr_8x8_block
 global glcd_bitnum, glcd_x, glcd_dx, glcd_dy, glcd_Y
 
 psect udata_acs ;can use 0x10-0x1F, but share with glcd_debug and ascii_5x8
@@ -103,14 +101,15 @@ glcd_clr_pixel_W:
     call write_strip_W
     return
     
-glcd_set_rect:
-    ;glcd_x, glcd_y, glcd_dx, glcd_dy all set already
-    movf glcd_y, A
-    call psel_W
-    return
-
-glcd_clr_rect:
-    return
+;;;;;;;incomplete
+;glcd_set_rect:
+;    ;glcd_x, glcd_y, glcd_dx, glcd_dy all set already
+;    movf glcd_y, A
+;    call psel_W
+;    return
+;
+;glcd_clr_rect:
+;    return
 
 glcd_set_8x8_block:
     ;paint an 8x8 block with glcd_Y already set
@@ -145,14 +144,14 @@ glcd_clr_8x8_block:
     return
 
 glcd_draw_apple:
-    ;paint an 8x8 apple with apple_X and apple_Y already set
-    movf apple_Y, W, A ;must be 0 - 15, i.e. 0b00000000 to 0b00001111
+    ;paint an 8x8 apple with glcd_X and glcd_Y already set
+    movf glcd_Y, W, A ;must be 0 - 15, i.e. 0b00000000 to 0b00001111
     andlw 0b00001111 ;make sure it doesnt overflow
     rlncf WREG, W, A ;multiply by 8
     rlncf WREG, W, A
     rlncf WREG, W, A
     call ysel_W
-    movf apple_X, W, A
+    movf glcd_page, W, A
     call psel_W
     movlw 0x00
     call write_strip_W
@@ -172,8 +171,9 @@ glcd_draw_apple:
     call write_strip_W 
     return
 
-;;;;;;;;;;;;;;
-bin_to_idx:
+;;;;;;;;;;;;;; utils
+bin_to_idx: ;comverts glcd_bitnum from a binary number from 0 to 7 to a single digit binary index in-place
+    ;e.g. 00000101 (5) -> 00100000 (only bit 5 is set, remember zero indexed so from 0 to 7) 
     movlw 0xFF
     incf WREG, A ; W=0 and carry=1
     shift_loop:

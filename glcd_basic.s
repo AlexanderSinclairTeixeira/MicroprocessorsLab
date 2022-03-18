@@ -107,7 +107,6 @@ write_strip_W:
     call csel_L ;assume left, i.e. 0 <= W < 64
     btfsc glcd_y, 6, A ;skip the next instruction if bit 6 of glcd_y is clear
     call csel_R ;if it is set, we are in 64-127, so on the right chip
-    nop
     
     bsf LATB, GLCD_RS, A ;data
     nop
@@ -129,46 +128,43 @@ read_data:
     bsf LATB, GLCD_RS, A ;data
     nop
     bsf LATB, GLCD_RW, A ;reading
-    nop
-    bsf LATB, GLCD_E, A ;send instruction
-    nop
-    bcf LATB, GLCD_E, A ;clock on falling edge
-    call delay_500ns
+    call clock
     movff PORTD, glcd_read, A ; and get the data from the port pins
     movlw 0x00
     movwf TRISD, A ;PORTD back to output
     incf glcd_y, A
     return
    
-read_status:
-    ;B0PR0000
-    ;B=Busy: 0-ready, 1-in operation
-    ;P=power: 0-on, 1-off
-    ;R=Reset: 0-normal, 1-reset
-    movlw 0xFF
-    movwf TRISD, A ;set PORTD as input
-    call csel_L ;assume left, i.e. 0 <= W < 64
-    btfsc glcd_y, 6, A ;skip the next instruction if bit 6 of W is clear
-    call csel_R ;if it is set, we are in 64-127, so on the right chip
-    
-    bcf LATB, GLCD_RS, A ;instruction
-    nop
-    bsf LATB, GLCD_RW, A ;reading
-    nop
-    bsf LATB, GLCD_E, A ;send instruction
-    nop
-    bcf LATB, GLCD_E, A ;clock on falling edge
-    nop
-    movff PORTD, glcd_status, A ;and get the data from the port pins
-    movlw 0x00
-    movwf TRISD, A;PORTD back to output
-    return
-    
-wait_till_free:
-    call read_status
-    btfsc glcd_status, 7, A ;top bit is 1 when "Busy"
-    goto wait_till_free
-    return
+;;;;;;;unused / incomplete
+;read_status:
+;    ;B0PR0000
+;    ;B=Busy: 0-ready, 1-in operation
+;    ;P=power: 0-on, 1-off
+;    ;R=Reset: 0-normal, 1-reset
+;    movlw 0xFF
+;    movwf TRISD, A ;set PORTD as input
+;    call csel_L ;assume left, i.e. 0 <= W < 64
+;    btfsc glcd_y, 6, A ;skip the next instruction if bit 6 of W is clear
+;    call csel_R ;if it is set, we are in 64-127, so on the right chip
+;    
+;    bcf LATB, GLCD_RS, A ;instruction
+;    nop
+;    bsf LATB, GLCD_RW, A ;reading
+;    nop
+;    bsf LATB, GLCD_E, A ;send instruction
+;    nop
+;    bcf LATB, GLCD_E, A ;clock on falling edge
+;    nop
+;    movff PORTD, glcd_status, A ;and get the data from the port pins
+;    movlw 0x00
+;    movwf TRISD, A;PORTD back to output
+;    return
+;    
+;wait_till_free:
+;    call read_status
+;    btfsc glcd_status, 7, A ;top bit is 1 when "Busy"
+;    goto wait_till_free
+;    return
    
 ;inner function calls to save being repetitive
 csel_L:
@@ -187,7 +183,7 @@ csel_R:
 
 ;timing stuff
 clock: ;set the clock to run (falling edge)
-	call delay_1us
+	call delay_1us ;need these to wait for not busy (bit hacky but could be faster than wait_till_free)
 	call delay_1us
 	call delay_1us
 	call delay_1us
