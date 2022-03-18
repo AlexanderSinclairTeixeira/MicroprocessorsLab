@@ -19,6 +19,7 @@
       <itemPath>main.s</itemPath>
       <itemPath>ascii_5x8.s</itemPath>
       <itemPath>apples.s</itemPath>
+      <itemPath>buffer.s</itemPath>
     </logicalFolder>
     <logicalFolder name="ExternalFiles"
                    displayName="Important Files"
