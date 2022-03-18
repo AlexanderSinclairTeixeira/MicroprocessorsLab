@@ -156,17 +156,17 @@ glcd_draw_apple:
     call psel_W
     movlw 0x00
     call write_strip_W
-    movlw 0x78 ;0x1E
+    movlw 0x78
     call write_strip_W 
-    movlw 0x37
+    movlw 0xEC
     call write_strip_W
-    movlw 0x2F
+    movlw 0xF4
     call write_strip_W 
-    movlw 0x7F
+    movlw 0xFE
     call write_strip_W
-    movlw 0xBF
+    movlw 0xFD
     call write_strip_W 
-    movlw 0x9E
+    movlw 0x79
     call write_strip_W
     movlw 0x00
     call write_strip_W 

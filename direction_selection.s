@@ -24,6 +24,8 @@ pos_start:
     ;set the initial coordiantes
     movlw 3
     movwf x_pos, A
+    movlw 1
+    movwf y_pos, A
     movwf y_pos, A
     ;set the initial direction
     movlw right
