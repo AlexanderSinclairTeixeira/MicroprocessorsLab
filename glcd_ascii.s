@@ -1,6 +1,6 @@
 #include <xc.inc>
 
-extrn write_strip_W
+extrn write_strip_W, ysel_W
 extrn glcd_y, glcd_page
     
 global ascii_setup, ascii_write_W
@@ -101,41 +101,41 @@ psect	ascii_code, class=CODE
 	;invalid characters will show up as checkerboard pattern
 	movwf ascii_char, A
 	movlw 32
-	subwf ascii_char, F ;put it back in the file
-	btfss STATUS, 0 ;zero is carry bit
+	subwf ascii_char, F, A ;put it back in the file
+	btfss CARRY
 	    goto invalid ;ascii_char < 32 as carry was clear (so borrow occured)
 	;asci_char was 32, 33, 34... now is 0, 1, 2...
 	movlw 2
-	subwf ascii_char, W ;back in W for now
-	btfss STATUS, 0 ;zero is carry bit
+	subwf ascii_char, W, A ;back in W for now
+	btfss CARRY
 	    goto valid ; ascii_char was 32 or 33, now holds 0 or 1
 	;ascii_char was 34, 35, 36... now holds 2, 3, 4...
 	movlw 6
-	subwf ascii_char, F ;back in the file
-	btfss STATUS, 0 ;zero is carry bit
+	subwf ascii_char, F, A ;back in the file
+	btfss CARRY
 	    goto invalid ;ascii_char was 34-37
 	;ascii_char was 38, 39, 40... now holds 0, 1, 2...
 	movlw 2
-	subwf ascii_char, W
-	btfss STATUS, 0 ;zero is carry bit
+	subwf ascii_char, W, A
+	btfss CARRY
 	    goto invalid ;ascii_char was 38 or 39
 	;ascii_char was 40, 41, 42... now holds 2, 3, 4...
 	movlw 20
-	subwf ascii_char, W
-	btfss STATUS, 0 ;zero is carry bit
+	subwf ascii_char, W, A
+	btfss CARRY
 	    goto valid ;ascii_char was 40-57, now holds 2-19
 	;ascii_char was 58, 59, 60... now holds 20, 21, 22...
 	movlw 2
 	subwf ascii_char, F, A ;back in the file
 	;ascii_char was 58, 59, 60... now holds 18, 19, 20...
 	movlw 20
-	subwf ascii_char, W
-	btfss STATUS, 0 ;zero is carry bit
+	subwf ascii_char, W, A
+	btfss CARRY
 	    goto invalid ;ascii_char was 58 or 59
 	;ascii_char was 60, 61, 62... now holds 20, 21, 22...
 	movlw 51
-	subwf ascii_char, W
-	btfss STATUS, 0 ;zero is carry bit
+	subwf ascii_char, W, A
+	btfss CARRY
 	    goto valid ;ascii_char was 60-90, now holds 20-50
 	goto invalid ;ascii_char was > 91
 	
@@ -148,7 +148,9 @@ psect	ascii_code, class=CODE
 	    mulwf ascii_char, A
 	    movff PRODL, FSR0L, A
 	    write_bytes:
-		movf POSTINC0, W
+		movf glcd_y, W
+		call ysel_W
+		movf POSTINC0, W, A
 		call write_strip_W
 		decfsz ascii_counter, A
 		    goto write_bytes
@@ -158,13 +160,15 @@ psect	ascii_code, class=CODE
 		
 	invalid:
 	    movlw 5
-	    movwf ascii_counter
+	    movwf ascii_counter, A
 	    movlw 0xAA
-	    movwf ascii_char
+	    movwf ascii_char, A
 	    write_invalid:
+		movf glcd_y, W
+		call ysel_W
 		call write_strip_W
-		comf ascii_char, F
-		decfsz ascii_counter
+		comf ascii_char, F, A
+		decfsz ascii_counter, F, A
 		    goto write_invalid
 		movlw 0
 		call write_strip_W ;right-spaced

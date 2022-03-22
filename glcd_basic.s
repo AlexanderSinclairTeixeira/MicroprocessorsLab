@@ -70,7 +70,7 @@ ysel_W:
     bcf PORTB, GLCD_RS, A ;instruction
     nop
     bcf PORTB, GLCD_RW, A ;writing
-    movf glcd_y, W ; load up the y value
+    movf glcd_y, W, A ; load up the y value
     bsf WREG, 6, A ;turn into desired instruction
     nop
     movwf PORTD, A
@@ -93,13 +93,7 @@ psel_W:
 	call clock
     ENDM
     return
-    
-;display_start:
-    ;used for scrolling i think?
-    ;call write_inst
-    ;needs implementing (maybe?)
-    ;return
-    
+
 write_strip_W:
     ;write a pixel strip from W to glcd ram
     ;increases y address automatically
@@ -114,7 +108,7 @@ write_strip_W:
     movf glcd_write, W, A ; load up the write value
     movwf LATD, A
     call clock ; this increases the GLCD's internal y address automatically
-    incf glcd_y, F
+    incf glcd_y, F, A
     bcf glcd_y, 7, A ;make sure top bit is 0 (overflows are a feature not a bug??)
     return
 
@@ -165,23 +159,29 @@ read_data:
 ;    btfsc glcd_status, 7, A ;top bit is 1 when "Busy"
 ;    goto wait_till_free
 ;    return
+;    
+;    
+;display_start:
+    ;used for scrolling i think?
+    ;call write_inst
+    ;needs implementing (maybe?)
+    ;return
+    
    
-;inner function calls to save being repetitive
+;;;;;;;;;;;;;;;;;;inner function calls to save being repetitive
 csel_L:
     bcf LATB, GLCD_CS1, A    ;clear the cs1 pin
     nop
     bsf LATB, GLCD_CS2, A    ;set the cs2 pin
-    ;call delay_250ns
     return
 
 csel_R:
     bsf LATB, GLCD_CS1, A    ;set the cs1 pin
     nop
     bcf LATB, GLCD_CS2, A    ;clear the cs2 pin
-    ;call delay_250ns
     return
 
-;timing stuff
+;;;;;;;;;;;;;;;;;;timing stuff
 clock: ;set the clock to run (falling edge)
 	call delay_1us ;need these to wait for not busy (bit hacky but could be faster than wait_till_free)
 	call delay_1us

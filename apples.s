@@ -17,8 +17,8 @@ rng_seed_setup: ;hardcoded for now, try to get some entropic seed?
     return
  
 rng_next: ;has a period of 16*8 - 1 !! can we get any better????
-    rlcf random_var, W ;rotate left, store result in W
-    xorwf random_var, W ;XOR original with shifte and store result in W
+    rlcf random_var, W, A ;rotate left, store result in W
+    xorwf random_var, W, A ;XOR original with shifte and store result in W
     bsf random_var, 7, A ;assume we were supposed to set the leftmost bit
     btfss WREG, 7, A ;we are trying to move this bit to the original file
 	bcf random_var, 7, A ;its clear, so clear the bit in the file
@@ -30,11 +30,11 @@ rng_next: ;has a period of 16*8 - 1 !! can we get any better????
 
 apple_XY_to_X_Y:
     movlw 0x0F
-    andwf apple_XY, W
-    movwf apple_Y
+    andwf apple_XY, W, A
+    movwf apple_Y, A
     movlw 0x07
-    movwf apple_X
-    movf apple_XY, W
-    swapf WREG, W
+    movwf apple_X, A
+    movf apple_XY, W, A
+    swapf WREG, W, A
     andwf apple_X, F, A
     return

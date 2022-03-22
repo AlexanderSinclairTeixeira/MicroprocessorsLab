@@ -33,67 +33,67 @@ buffer_init:
    
 buffer_write: ;writes the head_XY to the write pointer and increments, looping back around if necessary
     lfsr 0, buffer_start ;uses 12-bit word
-    movf write_offset, W
+    movf write_offset, W, A
     movff head_XY, PLUSW0
-    incf write_offset
-    decfsz write_counter
+    incf write_offset, A
+    decfsz write_counter, A
 	return
     call write_reset
     return
    
 buffer_read: ;reads the tail_XY to the read pointer and increments, looping back around if necessary
     lfsr 0, buffer_start
-    movf read_offset, W
+    movf read_offset, W, A
     movff PLUSW0, tail_XY
-    incf read_offset
-    decfsz read_counter
+    incf read_offset, A
+    decfsz read_counter, A
 	return
     call read_reset
     return
    
 write_reset:
     movlw buffer_length
-    movwf write_counter
+    movwf write_counter, A
     movlw 0
-    movwf write_offset
+    movwf write_offset, A
     return
    
 read_reset:
     movlw buffer_length
-    movwf read_counter
+    movwf read_counter, A
     movlw 0
-    movwf read_offset
+    movwf read_offset, A
     return
    
 check_is_full:
     ;checks if the buffer is full by seeing if the write pointer + 1 is equal to the read pointer
-    incf write_offset
-    movf read_offset, W
-    subwf write_offset
+    incf write_offset, A
+    movf read_offset, W, A
+    subwf write_offset, A
     btfss STATUS,2 ; skips if is full
 	return
     movlw 0xFF ;f for full
-    movwf full_is, W
+    movwf full_is, W, A
     return
     
 head_X_Y_to_XY:
     movlw 0x07
-    andwf head_X, W ;double check x_pos is 0 to 7
+    andwf head_X, W, A;double check x_pos is 0 to 7
     swapf WREG, W, A ; x_pos in high nibble
     movwf head_XY, A
     movlw 0x0F
-    andwf head_Y, W ;double check y_pos is 0 to 15
+    andwf head_Y, W, A ;double check y_pos is 0 to 15
     iorwf head_XY, F, A
     return
 
 tail_XY_to_X_Y:
     movlw 0x0F
-    andwf tail_XY, W
-    movwf tail_Y
+    andwf tail_XY, W, A
+    movwf tail_Y, A
     movlw 0x07
-    movwf tail_X
-    movf tail_XY, W
-    swapf WREG, W
+    movwf tail_X, A
+    movf tail_XY, W, A
+    swapf WREG, W, A
     andwf tail_X, F, A
     return
     

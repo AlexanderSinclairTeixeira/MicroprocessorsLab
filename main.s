@@ -1,4 +1,5 @@
 #include <xc.inc>
+;#include "p18f87k22.inc"
 
 ;;;;;;GLCD external stuff
 extrn glcd_setup, psel_W, ysel_W, read_data, write_strip_W, delay_ms_W ;GLCD basic functions
@@ -21,12 +22,26 @@ extrn random_var, apple_XY, apple_X, apple_Y ;apple vars
 extrn buffer_init, buffer_write, buffer_read, check_is_full, head_X_Y_to_XY, tail_XY_to_X_Y ;buffer funcs
 extrn head_XY, tail_XY, tail_X, tail_Y, full_is ;buffer vars
 
+#define left 1 ;for literal use only
+#define right 2 ;for literal use only
+#define up 4 ;for literal use only
+#define down 8 ;for literal use only
+
+;literal values only
+easy EQU 120
+med EQU 70
+hard EQU 40
+ 
 psect udata_acs
  ;main can use 0x00-0x0F
  ;glcd_basic, glcd_draw and glcd_ascii all share 0x10-0x1F
  ;direction_selection and apples share 0x20-0x2F
  ;buffer can use 0x40-0x48 plus the length of the buffer
     tempvar EQU 0x00
+    score EQU 0x01
+    timer_counter EQU 0x02
+    menu_choice EQU 0x03
+    difficulty EQU 0x04
 
 psect	code, abs	
 main:
@@ -34,25 +49,37 @@ main:
     goto setup
 	
 int_hi:
-    org 0x08	;high interrupt vector
+    org 0x008	;high interrupt vector
+    ;GIE is automatically cleared (no more interrupts)
+    decf timer_counter, F, A
+    bcf TMR0IF ; bit 2 is interrupt flag (must be cleared in each interrupt)
+    retfie ;automatically sets the GIE bit
     
+int_lo:
+    org 0x018	;low interrupt vector
+
 setup:
     org 0x100	; Main code starts here at address 0x100
     ;stuff to do when the PIC18 turns on for the first time
     call portE_setup    
     call glcd_setup ;turn on the screen
     call ascii_setup ;load the ascii character set into bank 2
+    call interrupt_setup ;enable the interrupt bits etc
     call rng_seed_setup ;hardcoded for now
-    call rng_next
-    call rng_next
-    call rng_next
+    ;call rng_next
     goto start
 
 start:
+    ; start screen and select game mode
+    call start_screen
     call buffer_init ; set the buffer pointers to the start
     call pos_start ;setup some game logic
-    ;draw the starting screen and write to the buffer
+    movlw 0x0
+    movwf score
+    ;draw the initial screen and write to the buffer
     call glcd_clr_all
+    movlw 0xFF
+    call delay_ms_W
     REPT 3 ;start with length 3
 	call switch_dirn ;increments head_X
 	call head_X_Y_to_XY ;updates head_XY from head_X and head_Y
@@ -63,44 +90,83 @@ start:
     
     movff random_var, apple_XY ;collect the random number
     call apple_XY_to_X_Y ;split up into apple_X and apple_Y
+    call glcd_update_apple
     call glcd_draw_apple ;place it on the screen
     call rng_next ;prepare a new random number
+    call timer0_setup
     goto event_loop ;game is ready to play!
 
 event_loop:
-    ;call apple_coverage_test
-    ;goto event_loop
-    
-    movlw 0xFF
-    call delay_ms_W ;wait some
-    
-    comf PORTE, W ;collect data from portE and complement as it had pullups on
+    ;poll portE for input
+    comf PORTE, W, A ;collect data from portE and complement as it had pullups on
     tstfsz WREG, A ;save a test by not writing if no input
         movwf dirn, A ;portE had something so write it
-    call switch_dirn ;tests for new direction; if it fails use last valid direction
+    
+    ;check if out timer has run out and we need to advance
+    movf timer_counter, W, A
+    addlw 0x0
+    btfsc ZERO
+        call advance
+    
+    goto event_loop
+    
+advance:
+    ;reset the counter so it starts ticking down again
+    movf difficulty, W, A
+    movwf timer_counter, A
+    
+    ;tests for new direction and advance
+    call switch_dirn ; if it fails use last valid direction
+    ;this automatically checks if we have hit the border
     btfsc hit_border, 0, A ;are we outside?
 	goto game_over
-    call head_X_Y_to_XY
-
-    ;here put a test to see if head_XY is the same as apple_XY
-    ;act on it
+    ;if not then it automatically advances head_X or head_Y by 1
+    call head_X_Y_to_XY ;split to head_X and head_Y
+    call glcd_update_head ;push the new position to the glcd values
     
-    ;here put a test to see if the head is colliding with the rest of the snake
-    ;could do this by reading glcd, checking the buffer, checking if its clear ahead or set ahead, etc...
-    
-    ;we are safe for now so advance...
+    ;test to see if the head is colliding with the rest of the snake
+    movf glcd_Y, W, A ;must be 0 - 15, i.e. 0b00000000 to 0b00001111
+    andlw 0b00001111 ;make sure it doesnt overflow
+    rlncf WREG, W, A ;multiply by 8
+    rlncf WREG, W, A
+    rlncf WREG, W, A
+    call ysel_W
+    movf glcd_page, W, A
+    call psel_W
+    call read_data ;read from the glcd to glcd_read
+    movlw 0xFF ; move the snake value to WREG
+    subwf glcd_read, W, A
+    btfsc ZERO ;check if there is a snake block here
+	;goto game_over ; its set; you died!
+	nop
+    ;we are safe for now so draw...
     call buffer_write ;save the head position
-    call glcd_update_head ;get the new position to the glcd values
     call glcd_set_8x8_block ;draw the head
     
+    ;here put a test to see if head_XY is the same as apple_XY
+    movf apple_XY, W, A
+    subwf head_XY, A
+    btfsc ZERO ; check if the apple coords are the same as the new head coords
+	goto ate_apple ;it is set so we overlapped with an apple
+
+    ;skip over this (dont delete the tail) if we ate an apple
     call buffer_read ;read the tail position to tail_position
     call tail_XY_to_X_Y ;convert byte to separate tail_X and tail_Y
     call glcd_update_tail
     call glcd_clr_8x8_block ;delete!
+    return
     
-    goto event_loop
+    ate_apple:
+	incf score, F, A
+	movff random_var, apple_XY ;collect the random number
+	call apple_XY_to_X_Y ;split up into apple_X and apple_Y
+	call glcd_update_apple
+	call glcd_draw_apple ;place it on the screen
+	call rng_next ;prepare a new random number
+    return
     
 game_over:
+    bcf TMR0ON ; bit 7 is timer enable (clear for off)
     call glcd_set_all
     movlw 32
     call ysel_W
@@ -126,6 +192,138 @@ game_over:
     call delay_ms_W
     goto start
 
+start_screen:
+    ; (empty)
+    ; SNAKE!
+    ; (empty)
+    ; EASY <
+    ; MEDIUM ^
+    ; HARD >
+    ; HIGHSCORES V
+    call glcd_clr_all
+    
+    movlw 1
+    call psel_W
+    movlw 44
+    call ysel_W
+    IRPC char, SNAKE
+	movlw 'char'
+	call ascii_write_W
+    ENDM
+    movlw "!"
+    call ascii_write_W
+    
+    movlw 3
+    call psel_W
+    movlw 24
+    call ysel_W
+    IRPC char, EASY
+	movlw 'char'
+	call ascii_write_W
+    ENDM
+    movlw 98
+    call ysel_W
+    IRP number, 0x18, 0x18, 0x3C, 0x3C, 0x7E, 0x7E, 0xFF, 0xFF
+	movlw number
+	call write_strip_W
+    ENDM
+    
+    movlw 4
+    call psel_W
+    movlw 24
+    call ysel_W
+    IRPC char, MEDIUM
+	movlw 'char'
+	call ascii_write_W
+    ENDM
+    movlw 98
+    call ysel_W
+    IRP number, 0xC0, 0xF0, 0xFC, 0xFF, 0xFF, 0xFC, 0xF0, 0xC0
+	movlw number
+	call write_strip_W
+    ENDM
+    
+    movlw 5
+    call psel_W
+    movlw 24
+    call ysel_W
+    IRPC char, HARD
+	movlw 'char'
+	call ascii_write_W
+    ENDM
+    movlw 98
+    call ysel_W
+    IRP number, 0xFF, 0xFF, 0x7E, 0x7E, 0x3C, 0x3C, 0x18, 0x18
+	movlw number
+	call write_strip_W
+    ENDM
+    
+    movlw 6
+    call psel_W
+    movlw 24
+    call ysel_W
+    IRPC char, HIGHSCORES
+	movlw 'char'
+	call ascii_write_W
+    ENDM
+    movlw 98
+    call ysel_W
+    IRP number, 0x18, 0x18, 0x3C, 0x3C, 0x7E, 0x7E, 0xFF, 0xFF
+	movlw number
+	call write_strip_W
+    ENDM
+    movlw 0x0
+    movwf menu_choice, A
+    goto switch_menu_choice
+
+switch_menu_choice:
+    comf PORTE, W, A ;collect data from portE and complement as it had pullups on
+    movwf menu_choice, A
+    ;is menu_choice == left??
+    movlw left
+    subwf menu_choice, W, A
+    btfsc STATUS, 2, A ;2 is zero bit
+	goto q_left
+    
+    ;is direction == right??
+    movlw right
+    subwf menu_choice, W, A
+    btfsc STATUS, 2, A ;2 is zero bit
+	goto q_right
+    
+    ;is direction == up??
+    movlw up
+    subwf menu_choice, W, A
+    btfsc STATUS, 2 , A ;2 is zero bit
+	goto q_up
+    
+    ;is direction == down??
+    movlw down
+    subwf menu_choice, W, A
+    btfsc STATUS, 2 , A ;2 is zero bit
+	goto q_down
+    
+    ;direction is neither of these so use last valid direction and switch again
+    goto switch_menu_choice
+    
+    q_left:
+	movlw easy
+	movwf difficulty, A
+	return
+
+    q_up:
+	movlw med
+	movwf difficulty, A
+	return
+	
+    q_right:
+	movlw hard
+	movwf difficulty, A
+	return
+	
+    q_down:
+	goto $
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;setup stuff
 portE_setup:
     banksel PADCFG1 ;select whichever bank this register is in
@@ -135,24 +333,47 @@ portE_setup:
     movlw 0xff
     movwf TRISE, A ;set as input
     return
-
+    
+timer0_setup:
+    ;T0PS<2:0> sets the prescaler (from 111->256x down to 000->2x)
+    ; 110 -> 128x
+    ;banksel T0CON
+    bsf T0PS2 ; bit 2 of the prescaler
+    bsf T0PS1 ; bit 1 of the prescaler
+    bcf T0PS0 ; bit 0 of the prescaler
+    ; now setup the remaining bits
+    bcf PSA ; bit 3 is prescaler assignment, clear for prescaler output
+    ; bit 4 is for rising/falling edge for external clock sources, so we do not care
+    bcf T0CS ; bit 5 is clock source (clear for use as a timer, F_osc/4)
+    bsf T08BIT ; bit 6 is set for 8 bit, clear for 16 bit
+    bsf TMR0ON ; bit 7 is timer enable (set for on)
+    return
+  
+interrupt_setup:
+    bsf IPEN ;Interrupt Priority Enable bit (set to enable priority levels)
+    bsf GIEH ;bit 7 is Global Interrupt Enable High (when IPEN is set), set to enable
+    bsf GIEL;bit 6 is Global Interrupt Enable Low (when IPEN is set), set to enable
+    bsf TMR0IE ; bit 5 is timer0 Interrupt Enable, set to enable
+    bcf TMR0IF ; bit 2 is interrupt flag (must be cleared in each interrupt)
+    return    
+    
 ;;;;;;;;;;;;;;;;;;; shortcut funcs
 glcd_update_head:
-    movf head_X, W
+    movf head_X, W, A
     movwf glcd_page, A
     movf head_Y, W, A
     movwf glcd_Y, A
     return
 
 glcd_update_tail:
-    movf tail_X, W
+    movf tail_X, W, A
     movwf glcd_page, A
     movf tail_Y, W, A
     movwf glcd_Y, A
     return
     
 glcd_update_apple:
-    movf apple_X, W
+    movf apple_X, W, A
     movwf glcd_page, A
     movf apple_Y, W, A
     movwf glcd_Y, A
@@ -160,6 +381,9 @@ glcd_update_apple:
 
 ;;;;;;;;;;;;;;;;;;;;;;;;testing stuff
 apple_coverage_test:
+    ;put the next two lines at the start of the main loop
+    ;call apple_coverage_test
+    ;goto event_loop
     movlw 0xFF
     call delay_ms_W ;wait some
     movff random_var, apple_XY ;collect the random number
