@@ -30,7 +30,8 @@ psect udata_acs
  ;main can use 0x00-0x0F
  ;glcd_basic, glcd_draw and glcd_ascii all share 0x10-0x1F
  ;direction_selection and apples share 0x20-0x2F
- ;buffer can use 0x40-0x48 plus the length of the buffer
+ ;buffer can use 0x40-0x48, but share with highscores
+ ;the buffer itself is stored in bank 0 starting at 0x80
     tempvar EQU 0x00
     difficulty EQU 0x01
     score EQU 0x02
@@ -81,8 +82,8 @@ start:
 	call glcd_set_8x8_block ;draw the block
     ENDM
     
-    movf random_var, W
-    movwf apple_XY ;collect the random number
+    movf random_var, W, A
+    movwf apple_XY, A ;collect the random number
     bcf WREG, 7, A ;clear the top bit as max x value is 7
     call apple_XY_to_X_Y ;split up into apple_X and apple_Y
     call glcd_update_apple
@@ -93,13 +94,14 @@ start:
 
 event_loop:
     ;poll portE for input
-    comf PORTE, W, A ;collect data from portE and complement as it had pullups on
+    ;;;changed comf PORTE to movf LATE for SIMULATOR
+    movf LATE, W, A ;collect data from portE and complement as it had pullups on
     tstfsz WREG, A ;save a test by not writing if no input
         movwf dirn, A ;portE had something so write it
     
     ;check if out timer has run out and we need to advance
     movf timer_counter, W, A
-    btfsc ZERO ;has the countdown finished?
+    ;btfsc ZERO ;has the countdown finished? ;;;commented out for SIMULATOR 
         call advance ;step forward
     btfss restart, 0, A ;do we need to restart?
         goto event_loop ;no, return to top of event loop
@@ -149,7 +151,7 @@ advance:
 	movf glcd_page, W, A
 	call psel_W
 	call read_data ;read from the glcd to glcd_read
-	movf glcd_read, W ;collect it
+	movf glcd_read, W, A ;collect it
 	btfss ZERO ;check if it is empty
 	    goto game_over_screen ; not empty so you bit yourself!
 	;we are safe for now so draw the first block...
@@ -188,6 +190,7 @@ timer0_setup:
     return
   
 interrupt_setup:
+    bcf TMR7GIE ;this for the simulator being buggy
     bsf IPEN ;Interrupt Priority Enable bit (set to enable priority levels)
     bsf GIEH ;bit 7 is Global Interrupt Enable High (when IPEN is set), set to enable
     bsf GIEL;bit 6 is Global Interrupt Enable Low (when IPEN is set), set to enable

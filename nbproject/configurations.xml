@@ -21,6 +21,7 @@
       <itemPath>glcd_basic.s</itemPath>
       <itemPath>glcd_ascii.s</itemPath>
       <itemPath>screens.s</itemPath>
+      <itemPath>highscores.s</itemPath>
     </logicalFolder>
     <logicalFolder name="ExternalFiles"
                    displayName="Important Files"

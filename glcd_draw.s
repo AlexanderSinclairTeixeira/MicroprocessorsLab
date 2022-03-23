@@ -3,11 +3,11 @@
 extrn psel_W, ysel_W, read_data, write_strip_W, delay_ms_W, delay_1us;functions
 extrn glcd_status, glcd_read, glcd_page, glcd_y, glcd_write ;variables
 
-global glcd_set_all, glcd_set_pixel_W, glcd_set_8x8_block, glcd_draw_apple
+global glcd_set_all, glcd_set_pixel_W, glcd_set_8x8_block, glcd_draw_apple, glcd_draw_left, glcd_draw_right, glcd_draw_up, glcd_draw_down
 global glcd_clr_all, glcd_clr_pixel_W, glcd_clr_8x8_block
 global glcd_bitnum, glcd_x, glcd_dx, glcd_dy, glcd_Y
 
-psect udata_acs ;can use 0x10-0x1F, but share with glcd_debug and ascii_5x8
+psect udata_acs ;can use 0x10-0x1F, but share with glcd_basic and ascii_5x8
     glcd_bitnum EQU 0x16
     glcd_x EQU 0x17 ;x-coord of pixel
     glcd_dx EQU 0x18 ;change in x rect
@@ -168,6 +168,34 @@ glcd_draw_apple:
     call write_strip_W
     movlw 0x00
     call write_strip_W 
+    return
+
+glcd_draw_left:
+    IRP number, 0x08, 0x1C, 0x1C, 0x3E, 0x3E, 0x7F, 0x7F, 0x00
+	movlw number
+	call write_strip_W
+    ENDM
+    return
+
+glcd_draw_right:
+    IRP number, 0x7F, 0x7F, 0x3E, 0x3E, 0x1C, 0x1C, 0x08, 0x00
+	movlw number
+	call write_strip_W
+    ENDM
+    return
+
+glcd_draw_up:
+    IRP number, 0x60, 0x78, 0x7E, 0x7F, 0x7E, 0x78, 0x60, 0x00
+	movlw number
+	call write_strip_W
+    ENDM
+    return    
+
+glcd_draw_down:
+    IRP number, 0x03, 0x0F, 0x3F, 0x7F, 0x3F, 0x0F, 0x03, 0x00
+	movlw number
+	call write_strip_W
+    ENDM
     return
 
 ;;;;;;;;;;;;;; utils

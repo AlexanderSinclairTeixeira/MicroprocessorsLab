@@ -148,7 +148,7 @@ psect	ascii_code, class=CODE
 	    mulwf ascii_char, A
 	    movff PRODL, FSR0L, A
 	    write_bytes:
-		movf glcd_y, W
+		movf glcd_y, W, A
 		call ysel_W
 		movf POSTINC0, W, A
 		call write_strip_W
@@ -164,7 +164,7 @@ psect	ascii_code, class=CODE
 	    movlw 0xAA
 	    movwf ascii_char, A
 	    write_invalid:
-		movf glcd_y, W
+		movf glcd_y, W, A
 		call ysel_W
 		call write_strip_W
 		comf ascii_char, F, A

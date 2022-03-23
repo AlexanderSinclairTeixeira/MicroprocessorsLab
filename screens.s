@@ -4,8 +4,10 @@ extrn glcd_update_apple ;main_funcs
 extrn difficulty, score, random_var ;main vars
 
 extrn psel_W, ysel_W, write_strip_W, delay_ms_W ;GLCD basic functions
+extrn glcd_page ;GLCD basic vars
 
-extrn glcd_set_all, glcd_clr_all ; GLCD draw funcs
+extrn glcd_set_all, glcd_clr_all, glcd_clr_8x8_block, glcd_draw_left, glcd_draw_right, glcd_draw_up, glcd_draw_down ; GLCD draw funcs
+extrn glcd_Y ;GLCD draw vars
 
 extrn ascii_write_W ;GLCD ascii funcs
 
@@ -49,10 +51,7 @@ menu_screen:
     ENDM
     movlw 98
     call ysel_W
-    IRP number, 0x18, 0x18, 0x3C, 0x3C, 0x7E, 0x7E, 0xFF, 0xFF
-	movlw number
-	call write_strip_W
-    ENDM
+    call glcd_draw_left
     
     movlw 4	     ; MEDIUM ^
     call psel_W
@@ -64,10 +63,7 @@ menu_screen:
     ENDM
     movlw 98
     call ysel_W
-    IRP number, 0xC0, 0xF0, 0xFC, 0xFF, 0xFF, 0xFC, 0xF0, 0xC0
-	movlw number
-	call write_strip_W
-    ENDM
+    call glcd_draw_up
     
     movlw 5	    ; HARD >
     call psel_W
@@ -79,10 +75,7 @@ menu_screen:
     ENDM
     movlw 98
     call ysel_W
-    IRP number, 0xFF, 0xFF, 0x7E, 0x7E, 0x3C, 0x3C, 0x18, 0x18
-	movlw number
-	call write_strip_W
-    ENDM
+    call glcd_draw_right
     
     movlw 6	        ; HIGHSCORES V
     call psel_W
@@ -94,10 +87,8 @@ menu_screen:
     ENDM
     movlw 98
     call ysel_W
-    IRP number, 0x18, 0x18, 0x3C, 0x3C, 0x7E, 0x7E, 0xFF, 0xFF
-	movlw number
-	call write_strip_W
-    ENDM
+    call glcd_draw_down
+    
     movlw 0x0
     movwf difficulty, A
     goto switch_difficulty
@@ -148,7 +139,8 @@ switch_difficulty:
 	return
 	
     q_down:
-	goto highscores_screen
+	call highscores_screen
+	goto menu_screen
 	
 highscores_screen:
     call glcd_clr_all
@@ -206,11 +198,25 @@ highscores_screen:
 	comf PORTE, W, A ;poll PORTE
 	btfsc ZERO ; has anything been pressed?
 	    goto highscores_loop
-	
+	return
 
 game_over_screen:
     bcf TMR0ON ; bit 7 is timer enable (clear for off)
     call glcd_set_all
+    movlw 1
+    movwf glcd_Y, A
+    movwf glcd_page, A
+    REPT 6
+	REPT 14
+	    call glcd_clr_8x8_block
+	    incf glcd_Y, F, A
+	    movlw 10
+	    call delay_ms_W
+	ENDM
+	incf glcd_page, F, A
+	movlw 60
+	call delay_ms_W
+    ENDM
     movlw 32
     call ysel_W
     movlw 2
@@ -218,12 +224,16 @@ game_over_screen:
     IRPC char, GAME
 	movlw 'char'
 	call ascii_write_W
+	movlw 100
+	call delay_ms_W
     ENDM
     movlw " "
     call ascii_write_W
     IRPC char, OVER
 	movlw 'char'
 	call ascii_write_W
+	movlw 100
+	call delay_ms_W
     ENDM
     movlw "!"
     call ascii_write_W
@@ -235,6 +245,8 @@ game_over_screen:
     IRPC char, SCORE
 	movlw 'char'
 	call ascii_write_W
+	movlw 100
+        call delay_ms_W
     ENDM
     movlw " "
     call ascii_write_W

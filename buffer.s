@@ -5,7 +5,7 @@ extrn head_X, head_Y
 global buffer_init, buffer_write, buffer_read, check_is_full, head_X_Y_to_XY, tail_XY_to_X_Y ;funcs
 global head_XY, tail_XY, tail_X, tail_Y, full_is ;vars
     
-psect udata_acs
+psect udata_acs ;can use 0x40 - 0x4F, but share with highscores
     write_offset EQU 0x40
     read_offset EQU 0x41
     write_counter EQU 0x42
@@ -15,8 +15,9 @@ psect udata_acs
     tail_X EQU 0x46
     tail_Y EQU 0x47
     full_is EQU 0x48
-    buffer_start EQU 0x49 ;where the buffer starts, do not use the next buffer_length locations
-    buffer_length EQU 5 ;used as a literal for the maximum length of the buffer (for now, do not exceed 0x5F!)
+ ;literal values below: buffer is in bank 0 at address 0x80 -> 0x80 + buffer_length
+    buffer_start EQU 0x80 ;where the buffer starts, do not use the next buffer_length locations
+    buffer_length EQU 10 ;used as a literal for the maximum length of the buffer (for now, do not exceed 0x5F!)
 
 psect buffer_code, class=CODE
 buffer_init:
@@ -70,7 +71,7 @@ check_is_full:
     incf write_offset, A
     movf read_offset, W, A
     subwf write_offset, A
-    btfss STATUS,2 ; skips if is full
+    btfss STATUS, 2, A ; skips if is full
 	return
     movlw 0xFF ;f for full
     movwf full_is, W, A
@@ -96,23 +97,3 @@ tail_XY_to_X_Y:
     swapf WREG, W, A
     andwf tail_X, F, A
     return
-    
-;;;;;;;;;;;;;;
-;start_buffer: debugging purposes
-;   
-; 
-;   
-;    call buffer_read
-;    call buffer_read
-;   
-;   
-;    call check_if_full
-;   
-;    movlw 0x00
-;    movwf head_XY
-;    call buffer_write
-;    call buffer_write
-;    call buffer_write
-;    call buffer_write
-;    call buffer_write
-;    goto $
