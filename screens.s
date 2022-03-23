@@ -207,6 +207,8 @@ game_over_screen:
     movwf glcd_Y, A
     movwf glcd_page, A
     REPT 6
+	movlw 1
+	movwf glcd_Y, A
 	REPT 14
 	    call glcd_clr_8x8_block
 	    incf glcd_Y, F, A

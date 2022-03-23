@@ -17,7 +17,7 @@ psect udata_acs ;can use 0x40 - 0x4F, but share with highscores
     full_is EQU 0x48
  ;literal values below: buffer is in bank 0 at address 0x80 -> 0x80 + buffer_length
     buffer_start EQU 0x80 ;where the buffer starts, do not use the next buffer_length locations
-    buffer_length EQU 10 ;used as a literal for the maximum length of the buffer (for now, do not exceed 0x5F!)
+    buffer_length EQU 0x70 ;used as a literal for the maximum length of the buffer (for now, do not exceed 0x5F!)
 
 psect buffer_code, class=CODE
 buffer_init:

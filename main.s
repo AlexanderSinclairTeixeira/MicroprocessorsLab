@@ -95,13 +95,13 @@ start:
 event_loop:
     ;poll portE for input
     ;;;changed comf PORTE to movf LATE for SIMULATOR
-    movf LATE, W, A ;collect data from portE and complement as it had pullups on
+    comf PORTE, W, A ;collect data from portE and complement as it had pullups on
     tstfsz WREG, A ;save a test by not writing if no input
         movwf dirn, A ;portE had something so write it
     
     ;check if out timer has run out and we need to advance
     movf timer_counter, W, A
-    ;btfsc ZERO ;has the countdown finished? ;;;commented out for SIMULATOR 
+    btfsc ZERO ;has the countdown finished? ;;;commented out for SIMULATOR 
         call advance ;step forward
     btfss restart, 0, A ;do we need to restart?
         goto event_loop ;no, return to top of event loop
@@ -190,7 +190,7 @@ timer0_setup:
     return
   
 interrupt_setup:
-    bcf TMR7GIE ;this for the simulator being buggy
+    ;;;;bcf TMR7GIE ;this for the SIMULATOR being buggy
     bsf IPEN ;Interrupt Priority Enable bit (set to enable priority levels)
     bsf GIEH ;bit 7 is Global Interrupt Enable High (when IPEN is set), set to enable
     bsf GIEL;bit 6 is Global Interrupt Enable Low (when IPEN is set), set to enable
