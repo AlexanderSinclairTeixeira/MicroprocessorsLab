@@ -23,8 +23,7 @@ rng_next: ;has a period of 16*8 - 1 !! can we get any better????
     btfss WREG, 7, A ;we are trying to move this bit to the original file
 	bcf random_var, 7, A ;its clear, so clear the bit in the file
     rlncf random_var, F, A ;rotate left no carry to get the next random number
-    
-    movlw 4
+    movlw 4 ;add for extra randomness! ;)
     addwf random_var, F, A
     return
 

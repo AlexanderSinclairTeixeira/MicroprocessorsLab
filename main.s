@@ -1,5 +1,4 @@
 #include <xc.inc>
-;#include "p18f87k22.inc"
 
 ;;;;;;GLCD external stuff
 extrn glcd_setup, psel_W, ysel_W, read_data, write_strip_W, delay_ms_W ;GLCD basic functions
@@ -13,7 +12,7 @@ extrn ascii_setup, ascii_write_W ;GLCD ascii funcs
     
 ;;;;;;game logic external stuff
 extrn pos_start, switch_dirn ;direction funcs
-extrn head_X, head_Y, dirn, hit_border ;direction vars
+extrn head_X, head_Y, dirn, restart ;direction vars
 
 extrn rng_seed_setup, rng_next, apple_XY_to_X_Y, glcd_draw_apple ;apple funcs
 extrn random_var, apple_XY, apple_X, apple_Y ;apple vars  
@@ -22,15 +21,10 @@ extrn random_var, apple_XY, apple_X, apple_Y ;apple vars
 extrn buffer_init, buffer_write, buffer_read, check_is_full, head_X_Y_to_XY, tail_XY_to_X_Y ;buffer funcs
 extrn head_XY, tail_XY, tail_X, tail_Y, full_is ;buffer vars
 
-#define left 1 ;for literal use only
-#define right 2 ;for literal use only
-#define up 4 ;for literal use only
-#define down 8 ;for literal use only
+;;;;;;for the screen stuff
+extrn menu_screen, game_over_screen
+global difficulty, score, glcd_update_apple, random_var
 
-;literal values only
-easy EQU 120
-med EQU 70
-hard EQU 40
  
 psect udata_acs
  ;main can use 0x00-0x0F
@@ -38,10 +32,9 @@ psect udata_acs
  ;direction_selection and apples share 0x20-0x2F
  ;buffer can use 0x40-0x48 plus the length of the buffer
     tempvar EQU 0x00
-    score EQU 0x01
-    timer_counter EQU 0x02
-    menu_choice EQU 0x03
-    difficulty EQU 0x04
+    difficulty EQU 0x01
+    score EQU 0x02
+    timer_counter EQU 0x03
 
 psect	code, abs	
 main:
@@ -71,11 +64,11 @@ setup:
 
 start:
     ; start screen and select game mode
-    call start_screen
+    call menu_screen
     call buffer_init ; set the buffer pointers to the start
     call pos_start ;setup some game logic
     movlw 0x0
-    movwf score
+    movwf score, A
     ;draw the initial screen and write to the buffer
     call glcd_clr_all
     movlw 0xFF
@@ -88,7 +81,9 @@ start:
 	call glcd_set_8x8_block ;draw the block
     ENDM
     
-    movff random_var, apple_XY ;collect the random number
+    movf random_var, W
+    movwf apple_XY ;collect the random number
+    bcf WREG, 7, A ;clear the top bit as max x value is 7
     call apple_XY_to_X_Y ;split up into apple_X and apple_Y
     call glcd_update_apple
     call glcd_draw_apple ;place it on the screen
@@ -104,11 +99,11 @@ event_loop:
     
     ;check if out timer has run out and we need to advance
     movf timer_counter, W, A
-    addlw 0x0
-    btfsc ZERO
-        call advance
-    
-    goto event_loop
+    btfsc ZERO ;has the countdown finished?
+        call advance ;step forward
+    btfss restart, 0, A ;do we need to restart?
+        goto event_loop ;no, return to top of event loop
+    goto start ;yes, go back to the start
     
 advance:
     ;reset the counter so it starts ticking down again
@@ -118,213 +113,56 @@ advance:
     ;tests for new direction and advance
     call switch_dirn ; if it fails use last valid direction
     ;this automatically checks if we have hit the border
-    btfsc hit_border, 0, A ;are we outside?
-	goto game_over
+    btfsc restart, 0, A ;are we outside?
+	goto game_over_screen
     ;if not then it automatically advances head_X or head_Y by 1
     call head_X_Y_to_XY ;split to head_X and head_Y
     call glcd_update_head ;push the new position to the glcd values
     
-    ;test to see if the head is colliding with the rest of the snake
-    movf glcd_Y, W, A ;must be 0 - 15, i.e. 0b00000000 to 0b00001111
-    andlw 0b00001111 ;make sure it doesnt overflow
-    rlncf WREG, W, A ;multiply by 8
-    rlncf WREG, W, A
-    rlncf WREG, W, A
-    call ysel_W
-    movf glcd_page, W, A
-    call psel_W
-    call read_data ;read from the glcd to glcd_read
-    movlw 0xFF ; move the snake value to WREG
-    subwf glcd_read, W, A
-    btfsc ZERO ;check if there is a snake block here
-	;goto game_over ; its set; you died!
-	nop
-    ;we are safe for now so draw...
-    call buffer_write ;save the head position
-    call glcd_set_8x8_block ;draw the head
-    
-    ;here put a test to see if head_XY is the same as apple_XY
-    movf apple_XY, W, A
-    subwf head_XY, A
-    btfsc ZERO ; check if the apple coords are the same as the new head coords
-	goto ate_apple ;it is set so we overlapped with an apple
-
-    ;skip over this (dont delete the tail) if we ate an apple
-    call buffer_read ;read the tail position to tail_position
-    call tail_XY_to_X_Y ;convert byte to separate tail_X and tail_Y
-    call glcd_update_tail
-    call glcd_clr_8x8_block ;delete!
-    return
-    
-    ate_apple:
+    test_apple:
+	;test to see if head_XY is the same as apple_XY
+	movf apple_XY, W, A
+	subwf head_XY, W, A
+	btfss ZERO ; check if the apple coords are the same as the new head coords
+	    goto test_empty ;it is clear so we did not eat, go to next test
+	;hence we ate an apple so the next spot is safe
+	call buffer_write ;save the head position
+	call glcd_set_8x8_block ;draw the head
 	incf score, F, A
-	movff random_var, apple_XY ;collect the random number
+	movf random_var, W, A
+	bcf WREG, 7, A ;clear the top bit as max x value is 7
+	movwf apple_XY, A ;collect the random number
 	call apple_XY_to_X_Y ;split up into apple_X and apple_Y
 	call glcd_update_apple
 	call glcd_draw_apple ;place it on the screen
 	call rng_next ;prepare a new random number
-    return
+	return ;no need to delete the tail
     
-game_over:
-    bcf TMR0ON ; bit 7 is timer enable (clear for off)
-    call glcd_set_all
-    movlw 32
-    call ysel_W
-    movlw 2
-    call psel_W
-    IRPC char, GAME
-	movlw 'char'
-	call ascii_write_W
-    ENDM
-    movlw " "
-    call ascii_write_W
-    IRPC char, OVER
-	movlw 'char'
-	call ascii_write_W
-    ENDM
-    movlw "!"
-    call ascii_write_W
-    movlw 0xFF
-    call delay_ms_W
-    movlw 0xFF
-    call delay_ms_W
-    movlw 0xFF
-    call delay_ms_W
-    goto start
-
-start_screen:
-    ; (empty)
-    ; SNAKE!
-    ; (empty)
-    ; EASY <
-    ; MEDIUM ^
-    ; HARD >
-    ; HIGHSCORES V
-    call glcd_clr_all
-    
-    movlw 1
-    call psel_W
-    movlw 44
-    call ysel_W
-    IRPC char, SNAKE
-	movlw 'char'
-	call ascii_write_W
-    ENDM
-    movlw "!"
-    call ascii_write_W
-    
-    movlw 3
-    call psel_W
-    movlw 24
-    call ysel_W
-    IRPC char, EASY
-	movlw 'char'
-	call ascii_write_W
-    ENDM
-    movlw 98
-    call ysel_W
-    IRP number, 0x18, 0x18, 0x3C, 0x3C, 0x7E, 0x7E, 0xFF, 0xFF
-	movlw number
-	call write_strip_W
-    ENDM
-    
-    movlw 4
-    call psel_W
-    movlw 24
-    call ysel_W
-    IRPC char, MEDIUM
-	movlw 'char'
-	call ascii_write_W
-    ENDM
-    movlw 98
-    call ysel_W
-    IRP number, 0xC0, 0xF0, 0xFC, 0xFF, 0xFF, 0xFC, 0xF0, 0xC0
-	movlw number
-	call write_strip_W
-    ENDM
-    
-    movlw 5
-    call psel_W
-    movlw 24
-    call ysel_W
-    IRPC char, HARD
-	movlw 'char'
-	call ascii_write_W
-    ENDM
-    movlw 98
-    call ysel_W
-    IRP number, 0xFF, 0xFF, 0x7E, 0x7E, 0x3C, 0x3C, 0x18, 0x18
-	movlw number
-	call write_strip_W
-    ENDM
-    
-    movlw 6
-    call psel_W
-    movlw 24
-    call ysel_W
-    IRPC char, HIGHSCORES
-	movlw 'char'
-	call ascii_write_W
-    ENDM
-    movlw 98
-    call ysel_W
-    IRP number, 0x18, 0x18, 0x3C, 0x3C, 0x7E, 0x7E, 0xFF, 0xFF
-	movlw number
-	call write_strip_W
-    ENDM
-    movlw 0x0
-    movwf menu_choice, A
-    goto switch_menu_choice
-
-switch_menu_choice:
-    comf PORTE, W, A ;collect data from portE and complement as it had pullups on
-    movwf menu_choice, A
-    ;is menu_choice == left??
-    movlw left
-    subwf menu_choice, W, A
-    btfsc STATUS, 2, A ;2 is zero bit
-	goto q_left
-    
-    ;is direction == right??
-    movlw right
-    subwf menu_choice, W, A
-    btfsc STATUS, 2, A ;2 is zero bit
-	goto q_right
-    
-    ;is direction == up??
-    movlw up
-    subwf menu_choice, W, A
-    btfsc STATUS, 2 , A ;2 is zero bit
-	goto q_up
-    
-    ;is direction == down??
-    movlw down
-    subwf menu_choice, W, A
-    btfsc STATUS, 2 , A ;2 is zero bit
-	goto q_down
-    
-    ;direction is neither of these so use last valid direction and switch again
-    goto switch_menu_choice
-    
-    q_left:
-	movlw easy
-	movwf difficulty, A
+    test_empty:
+	;test to see if the head is colliding with the rest of the snake
+	movf glcd_Y, W, A ;must be 0 - 15, i.e. 0b00000000 to 0b00001111
+	andlw 0b00001111 ;make sure it doesnt overflow
+	rlncf WREG, W, A ;multiply by 8
+	rlncf WREG, W, A
+	rlncf WREG, W, A
+	call ysel_W
+	movf glcd_page, W, A
+	call psel_W
+	call read_data ;read from the glcd to glcd_read
+	movf glcd_read, W ;collect it
+	btfss ZERO ;check if it is empty
+	    goto game_over_screen ; not empty so you bit yourself!
+	;we are safe for now so draw the first block...
+	call buffer_write ;save the head position
+	call glcd_set_8x8_block ;draw the head
+	;...and delete the last block
+	call buffer_read ;read the tail position to tail_position
+	call tail_XY_to_X_Y ;convert byte to separate tail_X and tail_Y
+	call glcd_update_tail
+	call glcd_clr_8x8_block ;delete!
 	return
 
-    q_up:
-	movlw med
-	movwf difficulty, A
-	return
-	
-    q_right:
-	movlw hard
-	movwf difficulty, A
-	return
-	
-    q_down:
-	goto $
-
-;;;;;;;;;;;;;;;;;;;;;;;;;setup stuff
+;;;;;;;;;;;;;;;;;;;;;;;;setup stuff
 portE_setup:
     banksel PADCFG1 ;select whichever bank this register is in
     bsf REPU ;activate the pullups on port E
@@ -377,20 +215,6 @@ glcd_update_apple:
     movwf glcd_page, A
     movf apple_Y, W, A
     movwf glcd_Y, A
-    return
-
-;;;;;;;;;;;;;;;;;;;;;;;;testing stuff
-apple_coverage_test:
-    ;put the next two lines at the start of the main loop
-    ;call apple_coverage_test
-    ;goto event_loop
-    movlw 0xFF
-    call delay_ms_W ;wait some
-    movff random_var, apple_XY ;collect the random number
-    call apple_XY_to_X_Y ;split up into apple_X and apple_Y
-    call glcd_update_apple
-    call glcd_draw_apple ;place it on the screen
-    call rng_next ;prepare a new random number
     return
 
 end	main

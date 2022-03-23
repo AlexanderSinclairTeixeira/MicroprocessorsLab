@@ -15,7 +15,6 @@ psect udata_acs ;can use 0x10-0x1F, but share with glcd_debug and ascii_5x8
     glcd_Y EQU 0x1A ;block y from 0 to 15
  
 psect glcd_code, class=CODE
- 
 glcd_set_all:
     movlw 0x00
     call psel_W
