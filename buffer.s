@@ -1,8 +1,8 @@
 #include <xc.inc>
 
-extrn head_X, head_Y
+extrn head_X, head_Y,apple_XY,apple_start,apple_legit
     
-global buffer_init, buffer_write, buffer_read, check_is_full, head_X_Y_to_XY, tail_XY_to_X_Y ;funcs
+global buffer_init, buffer_write, buffer_read, check_is_full, head_X_Y_to_XY, tail_XY_to_X_Y, buffer_search_init ;funcs
 global head_XY, tail_XY, tail_X, tail_Y, full_is ;vars
     
 psect udata_acs ;can use 0x40 - 0x4F, but share with highscores
@@ -15,6 +15,10 @@ psect udata_acs ;can use 0x40 - 0x4F, but share with highscores
     tail_X EQU 0x46
     tail_Y EQU 0x47
     full_is EQU 0x48
+    compare_XY EQU 0x49
+    search_offset EQU 0x4A
+    search_counter EQU 0x4B
+    
  ;literal values below: buffer is in bank 0 at address 0x80 -> 0x80 + buffer_length
     buffer_start EQU 0x80 ;where the buffer starts, do not use the next buffer_length locations
     buffer_length EQU 0x70 ;used as a literal for the maximum length of the buffer (for now, do not exceed 0x5F!)
@@ -96,4 +100,42 @@ tail_XY_to_X_Y:
     movf tail_XY, W, A
     swapf WREG, W, A
     andwf tail_X, F, A
+    return
+    
+buffer_search_init:
+    lfsr 0, buffer_start
+    movff read_offset, search_offset
+    movff read_counter, search_counter
+    movff tail_XY, compare_XY
+    ;call search_inc until search offset == write offset check search compare every time
+;    call buffer_search
+;    return  
+buffer_search:  
+    ;apple compare
+    movf apple_XY, W, A
+    ;subwf compare_XY, W, A
+    cpfseq compare_XY
+    goto $ + 8
+    goto apple_start
+    ;write compare
+    movf search_offset, W, A
+    cpfseq write_offset ;if write offset is equal to read offset then the apple is not in the snake
+    goto $ + 8
+    ;goto buffer_search ;it is clear so we did not eat, go to next test
+    goto apple_legit
+    call search_inc
+    goto buffer_search
+search_inc:  
+    movf search_offset, W, A
+    movff PLUSW0, compare_XY
+    incf search_offset, A
+    decfsz search_counter, A
+    return
+    call search_reset
+    return  
+search_reset:
+    movlw buffer_length
+    movwf search_counter, A
+    movlw 0
+    movwf search_offset, A
     return

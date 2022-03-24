@@ -25,7 +25,9 @@ extrn head_XY, tail_XY, tail_X, tail_Y, full_is ;buffer vars
 extrn menu_screen, game_over_screen
 global difficulty, score, glcd_update_apple, random_var
 
- 
+extrn buffer_search_init
+global apple_start, apple_legit
+
 psect udata_acs
  ;main can use 0x00-0x0F
  ;glcd_basic, glcd_draw and glcd_ascii all share 0x10-0x1F
@@ -74,6 +76,10 @@ start:
     call glcd_clr_all
     movlw 0xFF
     call delay_ms_W
+    movlw 0xFF
+    call delay_ms_W
+    movlw 0xFF
+    call delay_ms_W
     REPT 3 ;start with length 3
 	call switch_dirn ;increments head_X
 	call head_X_Y_to_XY ;updates head_XY from head_X and head_Y
@@ -111,7 +117,6 @@ advance:
     ;reset the counter so it starts ticking down again
     movf difficulty, W, A
     movwf timer_counter, A
-    
     ;tests for new direction and advance
     call switch_dirn ; if it fails use last valid direction
     ;this automatically checks if we have hit the border
@@ -121,7 +126,7 @@ advance:
     call head_X_Y_to_XY ;split to head_X and head_Y
     call glcd_update_head ;push the new position to the glcd values
     
-    test_apple:
+    test_apple:        
 	;test to see if head_XY is the same as apple_XY
 	movf apple_XY, W, A
 	subwf head_XY, W, A
@@ -131,13 +136,16 @@ advance:
 	call buffer_write ;save the head position
 	call glcd_set_8x8_block ;draw the head
 	incf score, F, A
-	movf random_var, W, A
-	bcf WREG, 7, A ;clear the top bit as max x value is 7
-	movwf apple_XY, A ;collect the random number
-	call apple_XY_to_X_Y ;split up into apple_X and apple_Y
-	call glcd_update_apple
-	call glcd_draw_apple ;place it on the screen
-	call rng_next ;prepare a new random number
+	apple_start:
+	    movf random_var, W, A
+	    bcf WREG, 7, A ;clear the top bit as max x value is 7
+	    movwf apple_XY, A ;collect the random number
+	    call rng_next ;prepare a new random number
+	    goto buffer_search_init
+	    apple_legit:
+	    call apple_XY_to_X_Y ;split up into apple_X and apple_Y
+	    call glcd_update_apple
+	    call glcd_draw_apple ;place it on the screen
 	return ;no need to delete the tail
     
     test_empty:

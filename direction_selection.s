@@ -19,6 +19,7 @@ psect udata_acs ;can use 0x20-0x2F, but share with apples
     dirn EQU 0x22 ; save a byte in memory for storing the direction
     dirn_last_valid EQU 0x23 ;should only be 1, 2, 4 or 8
     restart EQU 0x24 ;have we hit the border?
+    dirn_opposite EQU 0x25 ;<- just added in!!
  
 psect game_code, class=CODE
 pos_start:
@@ -31,11 +32,18 @@ pos_start:
     movlw right
     movwf dirn, A
     movwf dirn_last_valid, A
+    movlw left
+    movwf dirn_opposite
     movlw 0
     movwf restart, A
     return
    
 switch_dirn:
+    ;check if direction == direction opposite?? then skip this subroutine
+    movf dirn,W,A
+    subwf dirn_opposite, W, A
+    btfsc STATUS, 2, A ;2 is zero bit
+	goto stay_same
     ;is direction == left??
     movlw left
     subwf dirn, W, A
@@ -59,7 +67,7 @@ switch_dirn:
     subwf dirn, W, A
     btfsc STATUS, 2 , A ;2 is zero bit
 	goto p_down
-    
+    stay_same:
     ;direction is neither of these so use last valid direction and switch again
     movff dirn_last_valid, dirn
     goto switch_dirn
@@ -72,6 +80,8 @@ p_left:
 	comf restart, A ;is it is set, we have reached zero so game over
     decf head_Y, F, A ;otherwise decrement y
     movff dirn, dirn_last_valid ;update the last valid direction with this newest value
+    movlw right
+    movwf dirn_opposite
     return
    
 p_right:
@@ -81,6 +91,8 @@ p_right:
 	comf restart, A;is it is set, we have reached Y_max so game over
     incf head_Y, F, A
     movff dirn, dirn_last_valid ;update the last valid direction with this newest value
+    movlw left
+    movwf dirn_opposite
     return
     
 p_up:
@@ -91,6 +103,8 @@ p_up:
     movlw 1
     subwf head_X, F, A
     movff dirn, dirn_last_valid ;update the last valid direction with this newest value
+    movlw down
+    movwf dirn_opposite
     return
    
 p_down:
@@ -101,4 +115,6 @@ p_down:
     movlw 1
     addwf head_X, F, A
     movff dirn, dirn_last_valid ;update the last valid direction with this newest value
+    movlw up
+    movwf dirn_opposite
     return
