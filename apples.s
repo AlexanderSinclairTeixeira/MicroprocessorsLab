@@ -4,10 +4,10 @@ global rng_seed_setup, rng_next, apple_XY_to_X_Y ;apple funcs
 global random_var, apple_XY, apple_X, apple_Y ;apple vars    
 
 psect udata_acs ;can use 0x20-0x2F, but share with direction_selection
-    random_var EQU 0x25
-    apple_XY EQU 0x26 ;first nibble is X from 0 to 7, second nibble is Y from 0 to 15
-    apple_X EQU 0x27
-    apple_Y EQU 0x28
+    random_var EQU 0x26
+    apple_XY EQU 0x27 ;first nibble is X from 0 to 7, second nibble is Y from 0 to 15
+    apple_X EQU 0x28
+    apple_Y EQU 0x29
 
 psect	apple_code, class=CODE
 
