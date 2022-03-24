@@ -3,15 +3,15 @@
 extrn score
 
 global  load_scores, insert_new_score, write_scores_to_flash ;funcs
-global  letter_1st, letter_2nd, letter_3rd, letter_posn ;vars
+global  letter_1st, letter_2nd, letter_3rd, letter_posn, highscores ;vars
 
-psect udata_acs ;can use 0x40 - 0x4F, but share with buffer
-    temp_value EQU 0x49
-    letter_1st EQU 0x4A
-    letter_2nd EQU 0x4B
-    letter_3rd EQU 0x4C
-    score_counter EQU 0x4D
-    letter_posn EQU 0x4E
+psect udata_acs ;can use 0x50 - 0x5F
+    temp_value EQU 0x50
+    letter_1st EQU 0x51
+    letter_2nd EQU 0x52
+    letter_3rd EQU 0x53
+    score_counter EQU 0x54
+    letter_posn EQU 0x55
  
 psect data
     ;stores score, letter, letter, letter
@@ -25,7 +25,8 @@ load_scores:
     bcf	CFGS	; point to Flash program memory  
     bsf	EEPGD 	; access Flash program memory
     
-    lfsr	0, score_table	; Load FSR0 with address in RAM	
+    movlb 1
+    lfsr	0, highscores	; Load FSR0 with address in RAM	
     
     movlw	low highword(score_table)
     movwf	TBLPTRU, A		; load upper bits to TBLPTRU
@@ -48,6 +49,7 @@ load_scores:
 insert_new_score:
     movlw 5
     movwf score_counter, A
+    movlb 1
     lfsr 0, highscores
     check_next:
 	; old - new
@@ -94,4 +96,47 @@ insert_new_score:
         return
     
 write_scores_to_flash:
+    ;ERASE_BLOCK
+	MOVLW low highword(score_table) ; load TBLPTR with the base
+	MOVWF TBLPTRU, A ; address of the memory block
+	MOVLW high(score_table)
+	MOVWF TBLPTRH, A
+	MOVLW low(score_table)
+	MOVWF TBLPTRL, A
+	BSF EEPGD ; point to Flash program memory
+	BCF CFGS ; access Flash program memory
+	BSF WREN ; enable write to memory
+	BSF FREE ; enable Row Erase operation
+	BCF GIE ; disable interrupts
+	MOVLW 0x55 ;required sentence
+	MOVWF EECON2, A ; write 55h
+	MOVLW 0xAA
+	MOVWF EECON2, A ; write 0AAh
+	BSF WR ; start erase (CPU stall)
+	BSF GIE ; re-enable interrupts
+	TBLRD*- ; dummy read decrement
+	movlb 1
+	lfsr 0, highscores
+    ;WRITE_BUFFER_TO_HREGS
+	MOVLW 20 ; number of bytes in holding register
+	MOVWF score_counter, A
+	WRITE_BYTE_TO_HREGS:
+	    MOVFF POSTINC0, WREG ; get low byte of buffer data
+	    MOVWF TABLAT, A ; present data to table latch
+	    TBLWT+* ; write data, perform a short write
+	    ; to internal TBLWT holding register.
+	    DECFSZ score_counter ; loop until buffers are full
+		BRA WRITE_BYTE_TO_HREGS
+    ;WRITE_HREGS_TO_PROGMEM
+	BSF EEPGD ; point to Flash program memory
+	BCF CFGS ; access Flash program memory
+	BSF WREN ; enable write to memory
+	BCF GIE ; disable interrupts
+	MOVLW 0x55
+	MOVWF EECON2, A ; write 55h
+	MOVLW 0xAA
+	MOVWF EECON2, A ; write 0AAh
+	BSF WR ; start program (CPU stall)
+	BSF GIE ; re-enable interrupts
+	BCF WREN ; disable write to memory    
     return

@@ -4,8 +4,8 @@
 extrn glcd_setup, psel_W, ysel_W, read_data, write_strip_W, delay_ms_W ;GLCD basic functions
 extrn glcd_status, glcd_read, glcd_page, glcd_y, glcd_write ;GLCD basic variables
 
-extrn glcd_set_all, glcd_set_pixel_W, glcd_set_8x8_block ;GLCD draw funcs - setting
-extrn glcd_clr_all, glcd_clr_pixel_W, glcd_clr_8x8_block ;GLCD draw funcs - clearing
+extrn glcd_set_all, glcd_set_8x8_block ;GLCD draw funcs - setting
+extrn glcd_clr_all, glcd_clr_8x8_block ;GLCD draw funcs - clearing
 extrn glcd_bitnum, glcd_x, glcd_dx, glcd_dy, glcd_Y ;GLCD draw vars
 
 extrn ascii_setup, ascii_write_W ;GLCD ascii funcs
@@ -36,7 +36,8 @@ psect udata_acs
  ;main can use 0x00-0x0F
  ;glcd_basic, glcd_draw and glcd_ascii all share 0x10-0x1F
  ;direction_selection and apples share 0x20-0x2F
- ;buffer can use 0x40-0x48, but share with highscores
+ ;buffer can use 0x40-0x4F
+ ;highscores can use 0x50-0x5F
  ;the buffer itself is stored in bank 0 starting at 0x80
     tempvar EQU 0x00
     difficulty EQU 0x01

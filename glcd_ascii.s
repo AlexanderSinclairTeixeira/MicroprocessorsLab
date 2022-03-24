@@ -8,7 +8,7 @@ global ascii_setup, ascii_write_W
 psect udata_acs ;can use 0x10-0x1F, but share with glcd_draw and glcd_debug
     ascii_char EQU 0x1B
     ascii_counter EQU 0x1C
- 
+
 psect data ;ascii, class=CONST ;to hold in progmem for now
     ;allowed characters (length 51)
     ; (space)!()*+,-./0123456789<=>?@ABCDEFGHIJKLMNOPQRSTUVQXYZ
@@ -73,6 +73,7 @@ psect	ascii_code, class=CODE
 	bcf	CFGS	; point to Flash program memory  
 	bsf	EEPGD 	; access Flash program memory
 	
+	movlb 2
 	lfsr	0, ascii_characters	; Load FSR0 with address in RAM	
 	
 	movlw	low highword(ascii_table)
@@ -166,8 +167,9 @@ psect	ascii_code, class=CODE
 	    write_invalid:
 		movf glcd_y, W, A
 		call ysel_W
-		call write_strip_W
 		comf ascii_char, F, A
+		movf ascii_char, W
+		call write_strip_W
 		decfsz ascii_counter, F, A
 		    goto write_invalid
 		movlw 0

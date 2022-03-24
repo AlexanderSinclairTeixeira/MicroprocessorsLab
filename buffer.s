@@ -5,7 +5,7 @@ extrn head_X, head_Y,apple_XY,apple_start,apple_legit
 global buffer_init, buffer_write, buffer_read, check_is_full, head_X_Y_to_XY, tail_XY_to_X_Y, buffer_search_init ;funcs
 global head_XY, tail_XY, tail_X, tail_Y, full_is ;vars
     
-psect udata_acs ;can use 0x40 - 0x4F, but share with highscores
+psect udata_acs ;can use 0x40 - 0x4F
     write_offset EQU 0x40
     read_offset EQU 0x41
     write_counter EQU 0x42
