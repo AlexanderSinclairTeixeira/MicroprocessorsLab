@@ -202,7 +202,7 @@ timer0_setup:
     ; bit 4 is for rising/falling edge for external clock sources, so we do not care
     bcf T0CS ; bit 5 is clock source (clear for use as a timer, F_osc/4)
     bsf T08BIT ; bit 6 is set for 8 bit, clear for 16 bit
-    bcf TMR0ON ; bit 7 is timer enable (set for on) ;;;;;;;;;;;important!!
+    bsf TMR0ON ; bit 7 is timer enable (set for on) ;;;;;;;;;;;important!!
     return
   
 timer2_setup:
@@ -211,11 +211,11 @@ timer2_setup:
     bsf T2CKPS1 ; bit 1 of the prescaler
     ;bsf T2CKPS0 ; bit 0 of the prescaler, not needed when bit 1 is set
     ; now setup the postscaler (1:16 through 1:1 for T2OUTPS<3:0>)
-    ; set all for 16x
+    ; write 1100 for 12x
     bsf T2OUTPS3
     bsf T2OUTPS2
-    bsf T2OUTPS1
-    bsf T2OUTPS0
+    bcf T2OUTPS1
+    bcf T2OUTPS0
     bsf TMR2ON ; bit 7 is timer enable (set for on)
     return
 

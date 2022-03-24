@@ -22,9 +22,9 @@ global menu_screen, game_over_screen
 #define down 8 ;for literal use only
 
 ;literal values only
-easy EQU 90
+easy EQU 100
 med EQU 60
-hard EQU 35
+hard EQU 40
 
 psect screen_code, class=CODE
 menu_screen:
