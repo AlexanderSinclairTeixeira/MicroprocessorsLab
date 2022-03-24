@@ -58,6 +58,10 @@ glcd_off:
     call clock
     return
 
+y_sel:
+    ;select the y address from glcd_y in RAM
+    movf glcd_y, W
+
 ysel_W:
     ;select the y adress from WREG 0b00000000 - 0b01111111, i.e. 0 - 127
     ;now set the strip on the page from the value in working register
@@ -101,6 +105,12 @@ write_strip_W:
     call csel_L ;assume left, i.e. 0 <= W < 64
     btfsc glcd_y, 6, A ;skip the next instruction if bit 6 of glcd_y is clear
     call csel_R ;if it is set, we are in 64-127, so on the right chip
+
+;    test to see if we have passed over from one chip to the other
+;    movlw 64
+;    subwf glcd_y, W, A
+;    btfsc ZERO ;if its set we need to reset the y address on the second chip
+;	call y_sel
     
     bsf LATB, GLCD_RS, A ;data
     nop

@@ -45,12 +45,26 @@ main:
 int_hi:
     org 0x008	;high interrupt vector
     ;GIE is automatically cleared (no more interrupts)
-    decf timer_counter, F, A
-    bcf TMR0IF ; bit 2 is interrupt flag (must be cleared in each interrupt)
-    retfie ;automatically sets the GIE bit
+    goto high_priority_polls
     
 int_lo:
     org 0x018	;low interrupt vector
+
+high_priority_polls:
+    btfsc TMR2IF
+	goto timer2_interrupt
+    btfsc TMR0IF
+	goto timer0_interrupt
+    comf PORTJ ;ERROR: flicker on port J if we dont know how we got here
+    goto high_priority_polls
+    
+timer0_interrupt:
+    nop
+
+timer2_interrupt:
+    decf timer_counter, F, A
+    bcf TMR2IF ; bit 2 is interrupt flag (must be cleared in each interrupt)
+    retfie ;automatically sets the GIE bit
 
 setup:
     org 0x100	; Main code starts here at address 0x100
@@ -83,13 +97,14 @@ start:
     ENDM
     
     movf random_var, W, A
+    bcf WREG, 7, A ;clear the top bit as max x value is 7
     movwf apple_XY, A ;collect the random number
     bcf WREG, 7, A ;clear the top bit as max x value is 7
     call apple_XY_to_X_Y ;split up into apple_X and apple_Y
     call glcd_update_apple
     call glcd_draw_apple ;place it on the screen
     call rng_next ;prepare a new random number
-    call timer0_setup
+    call timer2_setup
     goto event_loop ;game is ready to play!
 
 event_loop:
@@ -105,6 +120,7 @@ event_loop:
         call advance ;step forward
     btfss restart, 0, A ;do we need to restart?
         goto event_loop ;no, return to top of event loop
+    call game_over_screen
     goto start ;yes, go back to the start
     
 advance:
@@ -116,7 +132,7 @@ advance:
     call switch_dirn ; if it fails use last valid direction
     ;this automatically checks if we have hit the border
     btfsc restart, 0, A ;are we outside?
-	goto game_over_screen
+	return
     ;if not then it automatically advances head_X or head_Y by 1
     call head_X_Y_to_XY ;split to head_X and head_Y
     call glcd_update_head ;push the new position to the glcd values
@@ -153,8 +169,9 @@ advance:
 	call read_data ;read from the glcd to glcd_read
 	movf glcd_read, W, A ;collect it
 	btfss ZERO ;check if it is empty
-	    goto game_over_screen ; not empty so you bit yourself!
+	    comf restart ; not empty so you bit yourself!
 	;we are safe for now so draw the first block...
+	;if not then its fine to draw it anyway, it will get restarted on the next loop
 	call buffer_write ;save the head position
 	call glcd_set_8x8_block ;draw the head
 	;...and delete the last block
@@ -177,7 +194,6 @@ portE_setup:
 timer0_setup:
     ;T0PS<2:0> sets the prescaler (from 111->256x down to 000->2x)
     ; 110 -> 128x
-    ;banksel T0CON
     bsf T0PS2 ; bit 2 of the prescaler
     bsf T0PS1 ; bit 1 of the prescaler
     bcf T0PS0 ; bit 0 of the prescaler
@@ -186,9 +202,23 @@ timer0_setup:
     ; bit 4 is for rising/falling edge for external clock sources, so we do not care
     bcf T0CS ; bit 5 is clock source (clear for use as a timer, F_osc/4)
     bsf T08BIT ; bit 6 is set for 8 bit, clear for 16 bit
-    bsf TMR0ON ; bit 7 is timer enable (set for on)
+    bcf TMR0ON ; bit 7 is timer enable (set for on) ;;;;;;;;;;;important!!
     return
   
+timer2_setup:
+    ;T2CKPS<1:0> sets the prescaler (16x, 4x and 1x)
+    ; 1x -> 16x
+    bsf T2CKPS1 ; bit 1 of the prescaler
+    ;bsf T2CKPS0 ; bit 0 of the prescaler, not needed when bit 1 is set
+    ; now setup the postscaler (1:16 through 1:1 for T2OUTPS<3:0>)
+    ; set all for 16x
+    bsf T2OUTPS3
+    bsf T2OUTPS2
+    bsf T2OUTPS1
+    bsf T2OUTPS0
+    bsf TMR2ON ; bit 7 is timer enable (set for on)
+    return
+
 interrupt_setup:
     ;;;;bcf TMR7GIE ;this for the SIMULATOR being buggy
     bsf IPEN ;Interrupt Priority Enable bit (set to enable priority levels)
@@ -196,6 +226,9 @@ interrupt_setup:
     bsf GIEL;bit 6 is Global Interrupt Enable Low (when IPEN is set), set to enable
     bsf TMR0IE ; bit 5 is timer0 Interrupt Enable, set to enable
     bcf TMR0IF ; bit 2 is interrupt flag (must be cleared in each interrupt)
+    bsf TMR2IE ; bit 5 is timer0 Interrupt Enable, set to enable
+    bcf TMR2IF ; bit 2 is interrupt flag (must be cleared in each interrupt)
+    bsf TMR2IP ; set for high priority
     return    
     
 ;;;;;;;;;;;;;;;;;;; shortcut funcs

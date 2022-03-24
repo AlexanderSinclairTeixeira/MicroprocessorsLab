@@ -22,9 +22,9 @@ global menu_screen, game_over_screen
 #define down 8 ;for literal use only
 
 ;literal values only
-easy EQU 120
-med EQU 70
-hard EQU 40
+easy EQU 90
+med EQU 60
+hard EQU 35
 
 psect screen_code, class=CODE
 menu_screen:
@@ -91,6 +91,8 @@ menu_screen:
     
     movlw 0x0
     movwf difficulty, A
+    movlw 0xFF
+    call delay_ms_W
     goto switch_difficulty
 
 switch_difficulty:
@@ -174,27 +176,35 @@ highscores_screen:
 	call ascii_write_W
     ENDM
     movlw " "
-    call ascii_write_W
+    call ascii_write_W    
+;    call glcd_draw_left
+;    call glcd_draw_right
+;    call glcd_draw_up
+;    call glcd_draw_down
+;    movlw " "
+;    call ascii_write_W
     IRPC char, KEY
 	movlw 'char'
 	call ascii_write_W
     ENDM
     movlw " "
     call ascii_write_W
-    IRPC char, TO
+    IRPC char, T
 	movlw 'char'
 	call ascii_write_W
     ENDM
-    movlw " "
-    call ascii_write_W
-    IRPC char, RETUR
-	movlw 'char'
-	call ascii_write_W
-    ENDM
-    movlw "N"
-    call ascii_write_W
+;    movlw " "
+;    call ascii_write_W
+;    IRPC char, RETUR
+;	movlw 'char'
+;	call ascii_write_W
+;    ENDM
+;    movlw "N"
+;    call ascii_write_W
     
     highscores_loop:
+	movlw 0xFF
+	call delay_ms_W
 	comf PORTE, W, A ;poll PORTE
 	btfsc ZERO ; has anything been pressed?
 	    goto highscores_loop
@@ -242,7 +252,7 @@ game_over_screen:
     
     movlw 32
     call ysel_W
-    movlw 4
+    movlw 3
     call psel_W
     IRPC char, SCORE
 	movlw 'char'
