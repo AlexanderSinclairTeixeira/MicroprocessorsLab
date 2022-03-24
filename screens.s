@@ -14,6 +14,8 @@ extrn ascii_write_W ;GLCD ascii funcs
 extrn apple_XY_to_X_Y, rng_next, glcd_draw_apple ;apple funcs
 extrn apple_XY ;apple vars
 
+extrn letter_1st, letter_2nd, letter_3rd, letter_posn ;score vars
+
 global menu_screen, game_over_screen
 
 #define left 1 ;for literal use only
@@ -163,7 +165,7 @@ highscores_screen:
     ;;;;;;
     movlw 7
     call psel_W
-    movlw 0
+    movlw 25
     call ysel_W
     IRPC char, PRESS
 	movlw 'char'
@@ -177,30 +179,10 @@ highscores_screen:
     ENDM
     movlw " "
     call ascii_write_W    
-;    call glcd_draw_left
-;    call glcd_draw_right
-;    call glcd_draw_up
-;    call glcd_draw_down
-;    movlw " "
-;    call ascii_write_W
     IRPC char, KEY
 	movlw 'char'
 	call ascii_write_W
     ENDM
-    movlw " "
-    call ascii_write_W
-    IRPC char, T
-	movlw 'char'
-	call ascii_write_W
-    ENDM
-;    movlw " "
-;    call ascii_write_W
-;    IRPC char, RETUR
-;	movlw 'char'
-;	call ascii_write_W
-;    ENDM
-;    movlw "N"
-;    call ascii_write_W
     
     highscores_loop:
 	movlw 0xFF
@@ -266,18 +248,44 @@ game_over_screen:
     addlw 0x30 ;only works for single digits for now!!!
     call ascii_write_W
     
-    movlw 0xFF
-    call delay_ms_W
-    movlw 0xFF
-    call delay_ms_W
-    movlw 0xFF
-    call delay_ms_W
-    movlw 0xFF
-    call delay_ms_W
-    movlw 0xFF
-    call delay_ms_W
+    movlw 12
+    call ysel_W
+    movlw 5
+    call psel_W
+    call glcd_draw_left
+    REPT 3
+        incf glcd_y
+	movlw 'A'
+        call glcd_draw_ascii
+	incf glcd_y
+    ENDM
+    call glcd_draw_right
+    
+        
+    
     return
 
+draw_select_arrows:
+    
+    movlw 12
+    call ysel_W
+    movlw 4
+    call psel_W
+    call glcd_draw_up
+    
+    movlw 12
+    call ysel_W
+    movlw 6
+    call psel_W
+    call glcd_draw_down
+
+letter_posn_to_glcd_y:
+    movf letter_posn, W, A
+    mullw 8
+    movf PRODL, W, A
+    addlw 12
+    movwf glcd_y
+    
 ;;;;;;;;;;;;;;;;;;;;;;;;testing stuff
 apple_coverage_test:
     ;put the next two lines at the start of the main loop

@@ -3,7 +3,7 @@
 extrn score
 
 global  load_scores, insert_new_score, write_scores_to_flash ;funcs
-global  letter_1st, letter_2nd, letter_3rd ;vars
+global  letter_1st, letter_2nd, letter_3rd, letter_posn ;vars
 
 psect udata_acs ;can use 0x40 - 0x4F, but share with buffer
     temp_value EQU 0x49
@@ -11,8 +11,10 @@ psect udata_acs ;can use 0x40 - 0x4F, but share with buffer
     letter_2nd EQU 0x4B
     letter_3rd EQU 0x4C
     score_counter EQU 0x4D
+    letter_posn EQU 0x4E
  
 psect data
+    ;stores score, letter, letter, letter
     score_table: ds 20
 
 psect udata_bank1 ; reserve data anywhere in RAM (here at 0x100)

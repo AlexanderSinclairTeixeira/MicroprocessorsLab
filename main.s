@@ -21,6 +21,10 @@ extrn random_var, apple_XY, apple_X, apple_Y ;apple vars
 extrn buffer_init, buffer_write, buffer_read, check_is_full, head_X_Y_to_XY, tail_XY_to_X_Y ;buffer funcs
 extrn head_XY, tail_XY, tail_X, tail_Y, full_is ;buffer vars
 
+;;;;;;highscore stuff
+extrn load_scores, insert_new_score, write_scores_to_flash ;funcs
+extrn letter_1st, letter_2nd, letter_3rd ;vars
+
 ;;;;;;for the screen stuff
 extrn menu_screen, game_over_screen
 global difficulty, score, glcd_update_apple, random_var
@@ -64,6 +68,7 @@ timer0_interrupt:
     nop
 
 timer2_interrupt:
+    comf PORTJ ;ERROR: flicker on port J if we dont know how we got here
     decf timer_counter, F, A
     bcf TMR2IF ; bit 2 is interrupt flag (must be cleared in each interrupt)
     retfie ;automatically sets the GIE bit
@@ -77,6 +82,7 @@ setup:
     call interrupt_setup ;enable the interrupt bits etc
     call rng_seed_setup ;hardcoded for now
     ;call rng_next
+    call load_scores
     goto start
 
 start:
