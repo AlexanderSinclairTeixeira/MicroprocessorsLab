@@ -27,7 +27,8 @@ extrn letter_1st, letter_2nd, letter_3rd ;vars
 
 ;;;;;;for the screen stuff
 extrn menu_screen, game_over_screen
-global difficulty, score, glcd_update_apple, random_var
+global difficulty, score, score_H, score_T, score_O, random_var
+global glcd_update_apple, bin_to_BCD
 
 extrn buffer_search_init
 global apple_start, apple_legit
@@ -41,8 +42,12 @@ psect udata_acs
  ;the buffer itself is stored in bank 0 starting at 0x80
     tempvar EQU 0x00
     difficulty EQU 0x01
-    score EQU 0x02
-    timer_counter EQU 0x03
+    timer_counter EQU 0x02
+    score EQU 0x03
+    score_H EQU 0x04
+    score_T EQU 0x05
+    score_O EQU 0x06
+    score_T_O EQU 0x07
 
 psect	code, abs	
 main:
@@ -62,14 +67,14 @@ high_priority_polls:
 	goto timer2_interrupt
     btfsc TMR0IF
 	goto timer0_interrupt
-    comf PORTJ ;ERROR: flicker on port J if we dont know how we got here
+    comf PORTJ, A ;ERROR: flicker on port J if we dont know how we got here
     goto high_priority_polls
     
 timer0_interrupt:
     nop
 
 timer2_interrupt:
-    comf PORTJ ;ERROR: flicker on port J if we dont know how we got here
+    comf PORTJ, A ;ERROR: flicker on port J if we dont know how we got here
     decf timer_counter, F, A
     bcf TMR2IF ; bit 2 is interrupt flag (must be cleared in each interrupt)
     retfie ;automatically sets the GIE bit
@@ -122,8 +127,9 @@ start:
 
 event_loop:
     ;poll portE for input
-    ;;;changed comf PORTE to movf LATE for SIMULATOR
     comf PORTE, W, A ;collect data from portE and complement as it had pullups on
+    ;;;changed comf PORTE to movf LATE for SIMULATOR
+    ;;;movf LATE, W, A
     tstfsz WREG, A ;save a test by not writing if no input
         movwf dirn, A ;portE had something so write it
     
@@ -184,7 +190,7 @@ advance:
 	call read_data ;read from the glcd to glcd_read
 	movf glcd_read, W, A ;collect it
 	btfss ZERO ;check if it is empty
-	    comf restart ; not empty so you bit yourself!
+	    comf restart, A ; not empty so you bit yourself!
 	;we are safe for now so draw the first block...
 	;if not then its fine to draw it anyway, it will get restarted on the next loop
 	call buffer_write ;save the head position
@@ -195,6 +201,48 @@ advance:
 	call glcd_update_tail
 	call glcd_clr_8x8_block ;delete!
 	return
+
+bin_to_BCD:
+    ;http://www.piclist.com/techref/microchip/math/radix/b2bhp-8b3d.htm
+    clrf    score_H, A
+    clrf    score_T, A
+    clrf    score_O, A
+    clrf    score_T_O, A
+    swapf   score, W, A   ; swap the nibbles
+    addwf   score, W, A   ; so we can add the upper to the lower
+    andlw   0x0F ; and lose the upper nibble (W is in BCD from now on)
+    btfsc   DC   ; if we carried a one (upper + lower > 16)
+	addlw  0x16        ; add 16 (the place value) (1s + 16 * 10s)
+    daw                 ; check for digit overflows
+
+    btfsc   score, 4, A   ; 16's place
+     addlw  0x16 - 1    ; add 16 - 1
+
+    btfsc   score, 5, A   ; 32nd's place
+     addlw  0x30        ; add 32 - 2
+
+    btfsc   score, 6, A     ; 64th's place
+     addlw  0x60        ; add 64 - 4
+
+    btfsc   score, 7, A   ; 128th's place
+     addlw  0x20        ; add 128 - 8 % 100
+
+    daw                 ; check for digit overflows
+    rlcf    score_H, F ; pop carry in hundreds' LSB
+
+    movwf   score_T_O
+    btfsc   score, 7, A    ; remember adding 28 - 8 for 128?
+	incf   score_H, F ; add the missing 100 if bit 7 is set
+    
+    movlw 0xF0
+    andwf score_T_O, W, A
+    swapf WREG, W, A
+    movwf score_T, A
+    
+    movlw 0x0F
+    andwf score_T_O, W, A
+    movwf score_O, A
+    return
 
 ;;;;;;;;;;;;;;;;;;;;;;;;setup stuff
 portE_setup:
@@ -235,7 +283,7 @@ timer2_setup:
     return
 
 interrupt_setup:
-    ;;;;bcf TMR7GIE ;this for the SIMULATOR being buggy
+    ;bcf TMR7GIE ;this for the SIMULATOR being buggy
     bsf IPEN ;Interrupt Priority Enable bit (set to enable priority levels)
     bsf GIEH ;bit 7 is Global Interrupt Enable High (when IPEN is set), set to enable
     bsf GIEL;bit 6 is Global Interrupt Enable Low (when IPEN is set), set to enable

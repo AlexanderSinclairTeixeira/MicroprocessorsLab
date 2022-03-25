@@ -114,12 +114,12 @@ buffer_search:
     ;apple compare
     movf apple_XY, W, A
     ;subwf compare_XY, W, A
-    cpfseq compare_XY
+    cpfseq compare_XY, A
     goto $ + 8
     goto apple_start
     ;write compare
     movf search_offset, W, A
-    cpfseq write_offset ;if write offset is equal to read offset then the apple is not in the snake
+    cpfseq write_offset, A ;if write offset is equal to read offset then the apple is not in the snake
     goto $ + 8
     ;goto buffer_search ;it is clear so we did not eat, go to next test
     goto apple_legit

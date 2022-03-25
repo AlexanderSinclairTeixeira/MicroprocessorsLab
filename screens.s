@@ -1,7 +1,7 @@
 #include <xc.inc>
 
-extrn glcd_update_apple ;main_funcs
-extrn difficulty, score, random_var ;main vars
+extrn glcd_update_apple, bin_to_BCD ;main_funcs
+extrn difficulty, score, score_H, score_T, score_O, random_var ;main vars
 
 extrn psel_W, ysel_W, write_strip_W, delay_ms_W ;GLCD basic functions
 extrn glcd_y, glcd_page ;GLCD basic vars
@@ -104,6 +104,7 @@ menu_screen:
 
 switch_difficulty:
     comf PORTE, W, A ;collect data from portE and complement as it had pullups on
+    ;movf LATE, W, A ;;; add this for the SIMULATOR
     movwf difficulty, A
     ;is difficulty == left??
     movlw left
@@ -165,13 +166,17 @@ highscores_screen:
     call psel_W
     movlw 24
     call ysel_W
-    movlb 1
     lfsr 0, highscores
 ;    REPT 5
 	movf POSTINC0, W, A
-	addlw 0x30 ;convert to ascii number
-	call ascii_write_W
-
+	movwf score, A
+	call bin_to_BCD
+	IRP score_digit, score_H, score_T, score_O
+	    movf score_digit, W, A
+	    addlw 0x30 ;convert to ascii number
+	    call ascii_write_W
+	ENDM
+	
 	    movf POSTINC0, W, A
 	    addlw 0x41 ;convert to ascii letter
 	    call ascii_write_W
@@ -212,6 +217,7 @@ highscores_screen:
 	movlw 0xFF
 	call delay_ms_W
 	comf PORTE, W, A ;poll PORTE
+	;movf LATE, W, A ;;;;; for the SIMULATOR
 	btfsc ZERO ; has anything been pressed?
 	    goto highscores_loop
 	return
@@ -268,10 +274,12 @@ game_over_screen:
     ENDM
     movlw " "
     call ascii_write_W
-    movf score, W, A
-    addlw 0x30 ;only works for single digits for now!!!
-    call ascii_write_W
-    
+    call bin_to_BCD
+    IRP score_digit, score_H, score_T, score_O
+	movf score_digit, W, A
+	addlw 0x30
+	call ascii_write_W
+    ENDM
     movlw 44
     call ysel_W
     movlw 5
@@ -344,6 +352,7 @@ switch_letter:
     movlw 0xFF
     call delay_ms_W
     comf PORTE, W, A ;collect data from portE and complement as it had pullups on
+    ;movf LATE, W, A ;;;;;;;for the SIMULATOR
     movwf dirn, A
     ;is dirn == left??
     movlw left
@@ -380,6 +389,7 @@ switch_letter:
 	movlw 1
 	cpfseq letter_posn, A
 	return
+    
 ;;;;;;;;;;;;;;;;;;;;;;;;testing stuff
 apple_coverage_test:
     ;put the next two lines at the start of the main loop

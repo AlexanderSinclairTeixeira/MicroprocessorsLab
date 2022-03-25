@@ -25,7 +25,6 @@ load_scores:
     bcf	CFGS	; point to Flash program memory  
     bsf	EEPGD 	; access Flash program memory
     
-    movlb 1
     lfsr	0, highscores	; Load FSR0 with address in RAM	
     
     movlw	low highword(score_table)
@@ -49,7 +48,6 @@ load_scores:
 insert_new_score:
     movlw 5
     movwf score_counter, A
-    movlb 1
     lfsr 0, highscores
     check_next:
 	; old - new
@@ -115,7 +113,6 @@ write_scores_to_flash:
 	BSF WR ; start erase (CPU stall)
 	BSF GIE ; re-enable interrupts
 	TBLRD*- ; dummy read decrement
-	movlb 1
 	lfsr 0, highscores
     ;WRITE_BUFFER_TO_HREGS
 	MOVLW 20 ; number of bytes in holding register
@@ -125,7 +122,7 @@ write_scores_to_flash:
 	    MOVWF TABLAT, A ; present data to table latch
 	    TBLWT+* ; write data, perform a short write
 	    ; to internal TBLWT holding register.
-	    DECFSZ score_counter ; loop until buffers are full
+	    DECFSZ score_counter, A ; loop until buffers are full
 		BRA WRITE_BYTE_TO_HREGS
     ;WRITE_HREGS_TO_PROGMEM
 	BSF EEPGD ; point to Flash program memory

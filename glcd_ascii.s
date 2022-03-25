@@ -73,7 +73,6 @@ psect	ascii_code, class=CODE
 	bcf	CFGS	; point to Flash program memory  
 	bsf	EEPGD 	; access Flash program memory
 	
-	movlb 2
 	lfsr	0, ascii_characters	; Load FSR0 with address in RAM	
 	
 	movlw	low highword(ascii_table)
@@ -143,7 +142,7 @@ psect	ascii_code, class=CODE
 	valid:
 	    ;multiply by 5, set the FSR, write 5 bytes
 	    movlw 2
-	    movwf FSR0H, A ;FSRs dont listen to banksel so manually set upper to bank 2
+	    movwf FSR0H, A ;manually set high byte to point to bank 2
 	    movlw 5
 	    movwf ascii_counter, A
 	    mulwf ascii_char, A

@@ -33,7 +33,7 @@ pos_start:
     movwf dirn, A
     movwf dirn_last_valid, A
     movlw left
-    movwf dirn_opposite
+    movwf dirn_opposite, A
     movlw 0
     movwf restart, A
     return
@@ -81,7 +81,7 @@ p_left:
     decf head_Y, F, A ;otherwise decrement y
     movff dirn, dirn_last_valid ;update the last valid direction with this newest value
     movlw right
-    movwf dirn_opposite
+    movwf dirn_opposite, A
     return
    
 p_right:
@@ -92,7 +92,7 @@ p_right:
     incf head_Y, F, A
     movff dirn, dirn_last_valid ;update the last valid direction with this newest value
     movlw left
-    movwf dirn_opposite
+    movwf dirn_opposite, A
     return
     
 p_up:
@@ -104,7 +104,7 @@ p_up:
     subwf head_X, F, A
     movff dirn, dirn_last_valid ;update the last valid direction with this newest value
     movlw down
-    movwf dirn_opposite
+    movwf dirn_opposite, A
     return
    
 p_down:
@@ -116,5 +116,5 @@ p_down:
     addwf head_X, F, A
     movff dirn, dirn_last_valid ;update the last valid direction with this newest value
     movlw up
-    movwf dirn_opposite
+    movwf dirn_opposite, A
     return
