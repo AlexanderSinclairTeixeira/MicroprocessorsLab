@@ -1,7 +1,7 @@
 #include <xc.inc>
 
 extrn glcd_update_apple, bin_to_BCD ;main_funcs
-extrn difficulty, score, score_H, score_T, score_O, random_var ;main vars
+extrn difficulty, score, score_H, score_T, score_O, random_var, tempvar ;main vars
 
 extrn psel_W, ysel_W, write_strip_W, delay_ms_W ;GLCD basic functions
 extrn glcd_y, glcd_page ;GLCD basic vars
@@ -19,10 +19,11 @@ extrn letter_1st, letter_2nd, letter_3rd, letter_posn ;score vars
 
 extrn dirn
 
-extrn highscores
+;extrn highscores
+highscores EQU 0x100
 
 global menu_screen, game_over_screen
-
+extrn tempvar2
 #define left 1 ;for literal use only
 #define right 2 ;for literal use only
 #define up 4 ;for literal use only
@@ -166,9 +167,12 @@ highscores_screen:
     call psel_W
     movlw 24
     call ysel_W
-    lfsr 0, highscores
-;    REPT 5
-	movf POSTINC0, W, A
+    
+    lfsr 1, highscores
+    movlw 5
+    movwf tempvar2, A
+    print_line:
+	movf POSTINC1, W, A
 	movwf score, A
 	call bin_to_BCD
 	IRP score_digit, score_H, score_T, score_O
@@ -177,17 +181,14 @@ highscores_screen:
 	    call ascii_write_W
 	ENDM
 	
-	    movf POSTINC0, W, A
-	    addlw 0x41 ;convert to ascii letter
+	    movf POSTINC1, W, A
+	    ;addlw 0x41 ;convert to ascii letter
 	    call ascii_write_W
-	    movf POSTINC0, W, A
-	    addlw 0x41 ;convert to ascii letter
+	    movf POSTINC1, W, A
+	    ;addlw 0x41 ;convert to ascii letter
 	    call ascii_write_W
-	    movf POSTINC0, W, A
-	    addlw 0x41 ;convert to ascii letter
-	    call ascii_write_W
-	    movf POSTINC0, W, A
-	    addlw 0x41 ;convert to ascii letter
+	    movf POSTINC1, W, A
+	    ;addlw 0x41 ;convert to ascii letter
 	    call ascii_write_W
 
 	incf glcd_page, A
@@ -195,7 +196,8 @@ highscores_screen:
 	call psel_W
 	movlw 24
 	call ysel_W
-;    ENDM
+    decfsz tempvar2, F, A
+	goto print_line
     IRPC char, PRESS
 	movlw 'char'
 	call ascii_write_W
@@ -223,7 +225,7 @@ highscores_screen:
 	return
 
 game_over_screen:
-    bcf TMR0ON ; bit 7 is timer enable (clear for off)
+    bcf TMR2ON ; bit 7 is timer enable (clear for off)
     call glcd_set_all
     movlw 1
     movwf glcd_Y, A
@@ -280,19 +282,10 @@ game_over_screen:
 	addlw 0x30
 	call ascii_write_W
     ENDM
-    movlw 44
-    call ysel_W
-    movlw 5
-    call psel_W
-    call glcd_draw_left
-    IRP letter_x, letter_1st, letter_2nd, letter_3rd
-        incf glcd_y, A
-	movlw 'B'
-	movwf letter_x, A
-        call ascii_write_W
-	incf glcd_y, A
-    ENDM
-    call glcd_draw_right
+    movlw 'A'
+    movwf letter_1st
+    movwf letter_2nd
+    movwf letter_3rd
     movlw 1
     movwf letter_posn, A
     movlw 0
@@ -300,8 +293,24 @@ game_over_screen:
     call enter_name
     return
 
+draw_letters:
+    movlw 44
+    call ysel_W
+    movlw 5
+    call psel_W
+    call glcd_draw_left
+    IRP letter_x, letter_1st, letter_2nd, letter_3rd
+        incf glcd_y, A
+	movf letter_x, W, A
+        call ascii_write_W
+	incf glcd_y, A
+    ENDM
+    call glcd_draw_right
+    return
+
 enter_name:
     call draw_select_arrows
+    call draw_letters
     call switch_letter
     movf letter_posn, W, A
     btfsc ZERO ;do we want to go back?
@@ -312,7 +321,7 @@ enter_name:
     goto enter_name
     save_score:
 	call insert_new_score
-	call write_scores_to_flash
+	;call write_scores_to_flash
 	return
     
 draw_select_arrows:
@@ -383,13 +392,70 @@ switch_letter:
 	incf letter_posn, A
 	return
     l_up:
-	nop
+	call mov_letter_W
+	decf WREG, W, A
+	call mov_W_letter
+	sublw 65
+	btfsc CARRY
+	    call underflowed
 	return
     l_down:
-	movlw 1
-	cpfseq letter_posn, A
+	call mov_letter_W
+	incf WREG, W, A
+	call mov_W_letter
+	sublw 91
+	btfsc ZERO
+	    call overflowed
 	return
-    
+	
+underflowed:
+    movlw 90
+    call mov_W_letter
+    return
+
+overflowed:
+    movlw 65
+    call mov_W_letter
+    return
+
+mov_letter_W:
+    movlw 1
+    cpfsgt letter_posn
+	goto letter_1st_to_W
+    movlw 2
+    cpfsgt letter_posn
+	goto letter_2nd_to_W
+    letter_3rd_to_W:
+	movf letter_3rd, W, A
+	return
+    letter_1st_to_W:
+	movf letter_1st, W, A
+	return
+    letter_2nd_to_W:
+	movf letter_2nd, W, A
+	return
+
+mov_W_letter:
+    movwf tempvar
+    movlw 1
+    cpfsgt letter_posn
+	goto it_was_1
+    movlw 2
+    cpfsgt letter_posn
+	goto it_was_2
+    it_was_3:
+	movf tempvar, W, A
+	movwf letter_3rd, A
+	return
+    it_was_1:
+    	movf tempvar, W, A
+	movwf letter_1st, A
+	return
+    it_was_2:
+    	movf tempvar, W, A
+	movwf letter_2nd, A
+	return	
+
 ;;;;;;;;;;;;;;;;;;;;;;;;testing stuff
 apple_coverage_test:
     ;put the next two lines at the start of the main loop

@@ -27,7 +27,7 @@ extrn letter_1st, letter_2nd, letter_3rd ;vars
 
 ;;;;;;for the screen stuff
 extrn menu_screen, game_over_screen
-global difficulty, score, score_H, score_T, score_O, random_var
+global difficulty, score, score_H, score_T, score_O, random_var, tempvar, tempvar2
 global glcd_update_apple, bin_to_BCD
 
 extrn buffer_search_init
@@ -48,6 +48,7 @@ psect udata_acs
     score_T EQU 0x05
     score_O EQU 0x06
     score_T_O EQU 0x07
+    tempvar2 EQU 0x08
 
 psect	code, abs	
 main:
@@ -88,7 +89,10 @@ setup:
     call interrupt_setup ;enable the interrupt bits etc
     call rng_seed_setup ;hardcoded for now
     ;call rng_next
-    call load_scores
+    ;call load_scores
+    movlw 20
+    lfsr 0, 0x100
+    call clear_scores
     goto start
 
 start:
@@ -128,8 +132,7 @@ start:
 event_loop:
     ;poll portE for input
     comf PORTE, W, A ;collect data from portE and complement as it had pullups on
-    ;;;changed comf PORTE to movf LATE for SIMULATOR
-    ;;;movf LATE, W, A
+    ;movf LATE, W, A ;changed comf PORTE to movf LATE for SIMULATOR
     tstfsz WREG, A ;save a test by not writing if no input
         movwf dirn, A ;portE had something so write it
     
@@ -245,6 +248,12 @@ bin_to_BCD:
     return
 
 ;;;;;;;;;;;;;;;;;;;;;;;;setup stuff
+clear_scores:
+    clrf POSTINC0
+    decfsz WREG
+	goto clear_scores
+    return
+
 portE_setup:
     banksel PADCFG1 ;select whichever bank this register is in
     bsf REPU ;activate the pullups on port E
